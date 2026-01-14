@@ -11,6 +11,8 @@ import { createPortal } from 'react-dom';
 import { useStore } from '../store';
 import { registerCustomDecoder } from '../decoders';
 import type { Decoder } from '../types/decoders';
+import { CodeEditor } from './CodeEditor';
+import { generateFromPrompt, generateTemplate } from '../utils/groqCodegen';
 
 interface AddDecoderModalProps {
   isOpen: boolean;
@@ -26,6 +28,9 @@ export const AddDecoderModal = memo(function AddDecoderModal({ isOpen, onClose }
   const [code, setCode] = useState('');
   const [description, setDescription] = useState('');
   const [error, setError] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [showAIPrompt, setShowAIPrompt] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState('');
 
   const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
@@ -96,6 +101,60 @@ export const AddDecoderModal = memo(function AddDecoderModal({ isOpen, onClose }
     setDescription('');
     onClose();
   }, [sourceType, name, url, code, description, registerDecoder, onClose]);
+
+  // AI Code Generation
+  const handleAIGenerate = useCallback(async () => {
+    if (!aiPrompt.trim() && !code.trim()) {
+      setError('Enter a description of what you want to build');
+      setShowAIPrompt(true);
+      return;
+    }
+
+    setIsGenerating(true);
+    setError('');
+
+    try {
+      const result = await generateFromPrompt(
+        aiPrompt.trim() || 'Generate a neural decoding model'
+      );
+      
+      setCode(result.code);
+      if (!description.trim()) {
+        setDescription(result.explanation);
+      }
+      setShowAIPrompt(false);
+      setAiPrompt('');
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Failed to generate code';
+      setError(errorMsg);
+      
+      // If API key is missing, provide helpful message
+      if (errorMsg.includes('API key')) {
+        setError('Add VITE_GROQ_API_KEY to your .env file to enable AI generation. Get a free key at https://console.groq.com');
+      }
+    } finally {
+      setIsGenerating(false);
+    }
+  }, [aiPrompt, code, description]);
+
+  // Quick template generation
+  const handleQuickTemplate = useCallback(async (templateType: 'mlp' | 'lstm' | 'cnn' | 'attention' | 'hybrid') => {
+    setIsGenerating(true);
+    setError('');
+
+    try {
+      const result = await generateTemplate(templateType);
+      setCode(result.code);
+      if (!description.trim()) {
+        setDescription(result.explanation);
+      }
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Failed to generate template';
+      setError(errorMsg);
+    } finally {
+      setIsGenerating(false);
+    }
+  }, [description]);
 
   if (!isOpen) return null;
 
@@ -181,56 +240,74 @@ export const AddDecoderModal = memo(function AddDecoderModal({ isOpen, onClose }
 
         {/* TensorFlow.js Code */}
         {sourceType === 'code' && (
-          <div className="flex-1 flex flex-col px-4 min-h-0">
-            <div className="flex items-center justify-between mb-2">
-              <label className="block text-xs text-gray-400">TensorFlow.js Code *</label>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-500 font-mono">JavaScript</span>
-                <div className="flex items-center gap-1">
-                  <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                  <span className="text-xs text-gray-400">Ready</span>
+          <>
+            {/* AI Prompt Panel */}
+            {showAIPrompt && (
+              <div className="mx-4 mb-2 p-3 bg-gradient-to-r from-purple-900/20 to-blue-900/20 rounded-lg border border-purple-500/30 animate-fade-in">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-xs text-purple-300 font-semibold">🤖 Describe what you want to build:</label>
+                  <button
+                    type="button"
+                    onClick={() => setShowAIPrompt(false)}
+                    className="text-gray-400 hover:text-white text-xs"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <textarea
+                  value={aiPrompt}
+                  onChange={(e) => setAiPrompt(e.target.value)}
+                  placeholder="e.g., Create a deep LSTM network with dropout for robust temporal decoding..."
+                  rows={3}
+                  className="w-full bg-gray-900/80 text-white px-3 py-2 rounded text-xs border border-purple-500/30 
+                    focus:border-purple-400 focus:outline-none focus:ring-1 focus:ring-purple-400/50 resize-none"
+                />
+                <div className="flex gap-2 mt-2">
+                  <button
+                    type="button"
+                    onClick={handleAIGenerate}
+                    disabled={isGenerating}
+                    className="flex-1 px-3 py-1.5 text-xs font-medium text-white bg-gradient-to-r from-purple-600 to-blue-600 
+                      rounded hover:from-purple-500 hover:to-blue-500 transition-all disabled:opacity-50"
+                  >
+                    {isGenerating ? 'Generating...' : '✨ Generate Code'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleQuickTemplate('mlp')}
+                    disabled={isGenerating}
+                    className="px-3 py-1.5 text-xs text-gray-300 bg-gray-700 rounded hover:bg-gray-600 disabled:opacity-50"
+                  >
+                    MLP
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleQuickTemplate('lstm')}
+                    disabled={isGenerating}
+                    className="px-3 py-1.5 text-xs text-gray-300 bg-gray-700 rounded hover:bg-gray-600 disabled:opacity-50"
+                  >
+                    LSTM
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleQuickTemplate('attention')}
+                    disabled={isGenerating}
+                    className="px-3 py-1.5 text-xs text-gray-300 bg-gray-700 rounded hover:bg-gray-600 disabled:opacity-50"
+                  >
+                    Attention
+                  </button>
                 </div>
               </div>
-            </div>
-            <div className="flex-1 relative min-h-0">
-              <textarea
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
-                placeholder={`// Build your TensorFlow.js model
-// The 'tf' global object provides access to all TensorFlow.js functionality
+            )}
 
-const model = tf.sequential();
-model.add(tf.layers.dense({ 
-  units: 64, 
-  activation: 'relu', 
-  inputShape: [142] 
-}));
-model.add(tf.layers.dense({ units: 2 }));
-model.compile({ 
-  optimizer: 'adam', 
-  loss: 'meanSquaredError' 
-});
-
-// Must return a compiled TensorFlow.js model
-return model;`}
-                className="absolute inset-0 w-full h-full bg-gray-900 text-white p-4 text-sm 
-                  border border-gray-700/50 focus:border-loopback focus:outline-none 
-                  focus:ring-2 focus:ring-loopback/50 resize-none font-mono leading-relaxed"
-                spellCheck={false}
-                style={{ 
-                  tabSize: 2,
-                  lineHeight: '1.6'
-                }}
-              />
-            </div>
-            <div className="mt-2 p-2 bg-gray-800/50 rounded-lg border border-gray-700/30">
-              <p className="text-xs text-gray-400 leading-relaxed">
-                <strong className="text-loopback">💡 Tip:</strong> Code must return a compiled TensorFlow.js model. 
-                The global <code className="text-loopback/80 bg-gray-900 px-1 rounded">tf</code> object 
-                provides full API access. Use <code className="text-loopback/80 bg-gray-900 px-1 rounded">tf.sequential()</code> or <code className="text-loopback/80 bg-gray-900 px-1 rounded">tf.model()</code> to build models.
-              </p>
-            </div>
-          </div>
+            {/* Monaco Code Editor */}
+            <CodeEditor
+              value={code}
+              onChange={setCode}
+              onGenerate={() => setShowAIPrompt(!showAIPrompt)}
+              isGenerating={isGenerating}
+            />
+          </>
         )}
 
         {/* Description */}
