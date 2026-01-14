@@ -7,6 +7,7 @@ export const ConnectionStatus = memo(function ConnectionStatus() {
   const isConnected = useStore((state) => state.isConnected);
   const sessionCode = useStore((state) => state.sessionCode);
   const connectionError = useStore((state) => state.connectionError);
+  const disconnectWebSocket = useStore((state) => state.disconnectWebSocket);
 
   return (
     <div className={`glass-panel px-4 py-2.5 rounded-xl transition-all duration-300 ${
@@ -37,6 +38,17 @@ export const ConnectionStatus = memo(function ConnectionStatus() {
             </span>
           )}
         </div>
+        
+        {/* Disconnect Button */}
+        {isConnected && (
+          <button
+            onClick={disconnectWebSocket}
+            className="ml-2 px-3 py-1 text-xs font-medium text-red-400 hover:text-red-300 
+              hover:bg-red-500/10 rounded-lg transition-all duration-200 border border-red-500/30 hover:border-red-500/50"
+          >
+            Disconnect
+          </button>
+        )}
       </div>
       
       {connectionError && (

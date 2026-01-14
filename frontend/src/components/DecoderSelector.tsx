@@ -108,7 +108,7 @@ export const DecoderSelector = memo(function DecoderSelector() {
   const jsDecoders = availableDecoders.filter(d => d.type === 'javascript');
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 max-h-[calc(100vh-8rem)] overflow-y-auto pr-2 scrollbar-thin">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse shadow-lg shadow-blue-500/50" />
@@ -170,21 +170,23 @@ export const DecoderSelector = memo(function DecoderSelector() {
 
         {/* Add Custom Decoder Button */}
         <button
-          onClick={() => setShowAddModal(true)}
+          onClick={() => setShowAddModal(!showAddModal)}
           disabled={isLoading}
           className="px-4 py-3 bg-gray-800 text-gray-400 hover:text-blue-400 rounded-xl text-sm font-bold border border-gray-600/50 
             hover:border-blue-500/50 transition-all duration-200 disabled:opacity-50"
           title="Add custom decoder from URL"
         >
-          +
+          {showAddModal ? '−' : '+'}
         </button>
       </div>
 
-      {/* Add Decoder Modal */}
-      <AddDecoderModal 
-        isOpen={showAddModal} 
-        onClose={() => setShowAddModal(false)} 
-      />
+      {/* Add Decoder Form - Inline */}
+      {showAddModal && (
+        <AddDecoderModal 
+          isOpen={showAddModal} 
+          onClose={() => setShowAddModal(false)} 
+        />
+      )}
 
       {/* Loading state */}
       {isLoading && (

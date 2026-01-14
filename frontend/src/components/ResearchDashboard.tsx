@@ -8,7 +8,6 @@ import { PerformanceRing } from './visualization/PerformanceRing';
 import { AccuracyGauge } from './visualization/AccuracyGauge';
 import { QuickStats } from './visualization/QuickStats';
 import { ConnectionStatus } from './ConnectionStatus';
-import { SessionManager } from './SessionManager';
 import { DecoderSelector } from './DecoderSelector';
 import { DecoderLoadingOverlay } from './LoadingStates';
 import { useStore } from '../store';
@@ -207,10 +206,6 @@ export const ResearchDashboard = memo(function ResearchDashboard() {
         <div className="flex flex-1 min-h-0 pointer-events-auto">
           {/* Left Sidebar - Controls */}
           <aside className="dashboard-sidebar w-80 shrink-0 overflow-y-auto scrollbar-hide">
-            <CollapsiblePanel title="Session Control" defaultOpen={true}>
-              <SessionManager />
-            </CollapsiblePanel>
-            
             <CollapsiblePanel title="Decoder Selection" defaultOpen={true}>
               <DecoderSelector />
             </CollapsiblePanel>
