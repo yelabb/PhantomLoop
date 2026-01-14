@@ -1,10 +1,9 @@
 /**
  * Add Custom Decoder Modal
  * 
- * Allows users to register their own decoders from:
- * - JavaScript code (custom logic)
- * - URL (pre-trained TensorFlow.js models)
- * - Local path (models in /models/ folder)
+ * Allows users to register their own decoders:
+ * - URL: Load pre-trained TensorFlow.js models
+ * - Code: Write JavaScript to build/train models with TensorFlow.js
  */
 
 import { memo, useState, useCallback } from 'react';
@@ -20,7 +19,7 @@ interface AddDecoderModalProps {
 export const AddDecoderModal = memo(function AddDecoderModal({ isOpen, onClose }: AddDecoderModalProps) {
   const registerDecoder = useStore((state) => state.registerDecoder);
   
-  const [decoderType, setDecoderType] = useState<'javascript' | 'tfjs'>('javascript');
+  const [sourceType, setSourceType] = useState<'url' | 'code'>('url');
   const [name, setName] = useState('');
   const [url, setUrl] = useState('');
   const [code, setCode] = useState('');
@@ -40,21 +39,7 @@ export const AddDecoderModal = memo(function AddDecoderModal({ isOpen, onClose }
     const id = `custom-${Date.now()}`;
     let decoder: Decoder;
 
-    if (decoderType === 'javascript') {
-      if (!code.trim()) {
-        setError('JavaScript code is required');
-        return;
-      }
-
-      decoder = {
-        id,
-        name: name.trim(),
-        type: 'javascript',
-        description: description.trim() || 'Custom JavaScript decoder',
-        code: code.trim(),
-        architecture: 'JavaScript',
-      };
-    } else {
+    if (sourceType === 'url') {
       if (!url.trim()) {
         setError('Model URL is required');
         return;
@@ -80,6 +65,21 @@ export const AddDecoderModal = memo(function AddDecoderModal({ isOpen, onClose }
           : { type: 'url', url },
         architecture: 'Custom',
       };
+    } else {
+      // Code-based model
+      if (!code.trim()) {
+        setError('JavaScript code is required');
+        return;
+      }
+
+      decoder = {
+        id,
+        name: name.trim(),
+        type: 'tfjs',
+        description: description.trim() || 'Custom TensorFlow.js model from code',
+        code: code.trim(),
+        architecture: 'Custom (Code)',
+      };
     }
 
     // Register with both the registry and store
@@ -94,7 +94,7 @@ export const AddDecoderModal = memo(function AddDecoderModal({ isOpen, onClose }
     setCode('');
     setDescription('');
     onClose();
-  }, [decoderType, name, url, code, description, registerDecoder, onClose]);
+  }, [sourceType, name, url, code, description, registerDecoder, onClose]);
 
   if (!isOpen) return null;
 
@@ -111,31 +111,31 @@ export const AddDecoderModal = memo(function AddDecoderModal({ isOpen, onClose }
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-3">
-        {/* Type selector */}
+        {/* Source type selector */}
         <div>
-          <label className="block text-xs text-gray-400 mb-1">Decoder Type *</label>
+          <label className="block text-xs text-gray-400 mb-1">Model Source *</label>
           <div className="flex gap-2">
             <button
               type="button"
-              onClick={() => setDecoderType('javascript')}
+              onClick={() => setSourceType('url')}
               className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                decoderType === 'javascript' 
+                sourceType === 'url' 
                   ? 'bg-loopback text-white' 
                   : 'bg-gray-700/50 text-gray-400 hover:bg-gray-700'
               }`}
             >
-              JavaScript
+              📦 URL
             </button>
             <button
               type="button"
-              onClick={() => setDecoderType('tfjs')}
+              onClick={() => setSourceType('code')}
               className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                decoderType === 'tfjs' 
+                sourceType === 'code' 
                   ? 'bg-loopback text-white' 
                   : 'bg-gray-700/50 text-gray-400 hover:bg-gray-700'
               }`}
             >
-              TensorFlow.js
+              💻 Code
             </button>
           </div>
         </div>
@@ -153,26 +153,8 @@ export const AddDecoderModal = memo(function AddDecoderModal({ isOpen, onClose }
           />
         </div>
 
-        {/* JavaScript Code */}
-        {decoderType === 'javascript' && (
-          <div>
-            <label className="block text-xs text-gray-400 mb-1">JavaScript Code *</label>
-            <textarea
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              placeholder={`// Available variables:\n// - input.spikes: number[]\n// - input.kinematics: { x, y, vx, vy }\n// - input.history: previous outputs\n\nconst { x, y, vx, vy } = input.kinematics;\nreturn { x, y, vx, vy };`}
-              rows={8}
-              className="w-full bg-gray-900/80 text-white px-3 py-2 rounded-lg text-xs border border-gray-600/50 
-                focus:border-loopback focus:outline-none focus:ring-1 focus:ring-loopback/50 resize-none font-mono"
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              Return an object with x, y (and optionally vx, vy)
-            </p>
-          </div>
-        )}
-
-        {/* TensorFlow.js URL */}
-        {decoderType === 'tfjs' && (
+        {/* Model URL */}
+        {sourceType === 'url' && (
           <div>
             <label className="block text-xs text-gray-400 mb-1">Model URL *</label>
             <input
@@ -185,6 +167,31 @@ export const AddDecoderModal = memo(function AddDecoderModal({ isOpen, onClose }
             />
             <p className="text-xs text-gray-500 mt-1">
               TensorFlow.js model URL (model.json) or /models/your-model/model.json
+            </p>
+          </div>
+        )}
+
+        {/* TensorFlow.js Code */}
+        {sourceType === 'code' && (
+          <div>
+            <label className="block text-xs text-gray-400 mb-1">TensorFlow.js Code *</label>
+            <textarea
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              placeholder={`// Build model with TensorFlow.js
+const model = tf.sequential();
+model.add(tf.layers.dense({ units: 64, activation: 'relu', inputShape: [142] }));
+model.add(tf.layers.dense({ units: 2 }));
+model.compile({ optimizer: 'adam', loss: 'meanSquaredError' });
+
+// Return the model
+return model;`}
+              rows={10}
+              className="w-full bg-gray-900/80 text-white px-3 py-2 rounded-lg text-xs border border-gray-600/50 
+                focus:border-loopback focus:outline-none focus:ring-1 focus:ring-loopback/50 resize-none font-mono"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Code must return a compiled TensorFlow.js model. 'tf' is available globally.
             </p>
           </div>
         )}
@@ -229,16 +236,18 @@ export const AddDecoderModal = memo(function AddDecoderModal({ isOpen, onClose }
 
       {/* Help text */}
       <div className="mt-3 pt-3 border-t border-gray-700/50">
-        {decoderType === 'javascript' ? (
+        {sourceType === 'code' ? (
           <>
             <p className="text-xs text-gray-500 leading-relaxed">
-              <strong className="text-gray-400">Available Input:</strong>
+              <strong className="text-gray-400">Build Custom Models:</strong> Use TensorFlow.js API to create, 
+              compile, and optionally train models. The global <code className="text-loopback/80">tf</code> object 
+              provides access to all TensorFlow.js functionality.
             </p>
-            <ul className="text-xs text-gray-500 mt-1 ml-4 space-y-1">
-              <li>• <code className="text-loopback/80">input.spikes</code>: number[] - Neural spike counts</li>
-              <li>• <code className="text-loopback/80">input.kinematics</code>: {`{ x, y, vx, vy }`} - True position/velocity</li>
-              <li>• <code className="text-loopback/80">input.history</code>: Previous decoder outputs</li>
-            </ul>
+            <p className="text-xs text-gray-500 mt-2 leading-relaxed">
+              <strong className="text-gray-400">Example:</strong> Create sequential models with 
+              <code className="text-loopback/80"> tf.sequential()</code>, add layers, compile with 
+              <code className="text-loopback/80"> model.compile()</code>, and return the model.
+            </p>
           </>
         ) : (
           <>

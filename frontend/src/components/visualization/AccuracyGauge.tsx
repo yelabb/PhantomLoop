@@ -10,6 +10,8 @@ interface AccuracyGaugeProps {
   accuracy: number;
   /** Current error 0-1 */
   error: number;
+  /** History length in seconds (optional) */
+  historyLength?: number;
 }
 
 // Sparkline component
@@ -170,7 +172,7 @@ const ErrorHistogram = memo(function ErrorHistogram({
 
 export const AccuracyGauge = memo(function AccuracyGauge({
   accuracy,
-  error,
+  error: _error,
   historyLength = 60,
 }: AccuracyGaugeProps) {
   // Get history from store (maintained in metricsSlice)

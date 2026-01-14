@@ -7,6 +7,7 @@ import { CenterOutArena } from './visualization/CenterOutArena';
 import { PerformanceRing } from './visualization/PerformanceRing';
 import { AccuracyGauge } from './visualization/AccuracyGauge';
 import { QuickStats } from './visualization/QuickStats';
+import { NeuronActivityGrid } from './visualization/NeuronActivityGrid';
 import { ConnectionStatus } from './ConnectionStatus';
 import { DecoderSelector } from './DecoderSelector';
 import { DecoderLoadingOverlay } from './LoadingStates';
@@ -246,7 +247,15 @@ export const ResearchDashboard = memo(function ResearchDashboard() {
               <AccuracyGauge
                 accuracy={currentAccuracy}
                 error={currentError}
-                historyLength={60}
+              />
+            </div>
+            
+            {/* Neuron Activity Grid Card */}
+            <div className="dashboard-card p-5">
+              <NeuronActivityGrid
+                columns={12}
+                maxNeurons={96}
+                showLabels={true}
               />
             </div>
           </aside>

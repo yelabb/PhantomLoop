@@ -1,7 +1,7 @@
 // Center-Out Arena - 2D Top-down visualization optimized for researchers
 // Shows targets, cursor trajectories, and real-time error visualization
 
-import { memo, useMemo, useEffect, useRef } from 'react';
+import { memo, useMemo } from 'react';
 import { useStore } from '../../store';
 import { COLORS } from '../../utils/constants';
 
@@ -47,161 +47,6 @@ function errorToColor(error: number): string {
   if (error < 0.4) return '#f97316'; // Orange
   return '#ef4444'; // Red
 }
-
-// Particle system for visualizing neural spikes
-interface Particle {
-  id: number;
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  life: number;
-  maxLife: number;
-  intensity: number;
-  channel: number;
-}
-
-// Neural spike background visualization
-const NeuralBackground = memo(function NeuralBackground({ 
-  spikes 
-}: { 
-  spikes: number[] | null 
-}) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const particlesRef = useRef<Particle[]>([]);
-  const frameIdRef = useRef<number | null>(null);
-  const particleIdRef = useRef(0);
-  const lastSpikeProcessRef = useRef<number>(0);
-  
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    
-    const ctx = canvas.getContext('2d', { alpha: true, desynchronized: true });
-    if (!ctx) return;
-    
-    // Enable hardware acceleration hints
-    ctx.imageSmoothingEnabled = false;
-    
-    // Generate particles based on spike activity (throttled to every 50ms)
-    const processSpikes = () => {
-      const now = performance.now();
-      if (now - lastSpikeProcessRef.current < 50) return;
-      lastSpikeProcessRef.current = now;
-      
-      if (!spikes || spikes.length === 0) return;
-      
-      const totalSpikes = spikes.reduce((sum, s) => sum + s, 0);
-      const avgSpikes = totalSpikes / spikes.length;
-      
-      // Normalize spike counts to intensity (0-1 range)
-      const maxSpikes = Math.max(...spikes, 1);
-      
-      // Create particles based on spike activity (reduced particle count for performance)
-      if (avgSpikes > 0 && particlesRef.current.length < 150) {
-        // Sample a subset of channels with intensity above 0.15 threshold
-        const activeChannels = spikes
-          .map((count, idx) => ({ 
-            count, 
-            idx,
-            intensity: count / maxSpikes 
-          }))
-          .filter(c => c.intensity > 0.15) // Only neurons firing above 0.15 intensity
-          .sort((a, b) => b.count - a.count)
-          .slice(0, 15); // Top 15 active channels
-        
-        activeChannels.forEach(({ count, idx, intensity }) => {
-          // Spawn fewer particles per channel for performance
-          const particleCount = Math.min(Math.ceil(count / 3), 2);
-          for (let i = 0; i < particleCount; i++) {
-            const angle = Math.random() * Math.PI * 2;
-            const radius = TARGET_RADIUS + Math.random() * 40;
-            const x = CENTER + Math.cos(angle) * radius;
-            const y = CENTER + Math.sin(angle) * radius;
-            
-            particlesRef.current.push({
-              id: particleIdRef.current++,
-              x,
-              y,
-              vx: (Math.random() - 0.5) * 0.5,
-              vy: (Math.random() - 0.5) * 0.5,
-              life: 0,
-              maxLife: 70 + Math.random() * 50,
-              intensity: Math.min(intensity * 1.2, 1.2), // Use normalized intensity
-              channel: idx,
-            });
-          }
-        });
-      }
-    };
-    
-    // Animation loop with optimizations
-    const animate = () => {
-      processSpikes();
-      ctx.clearRect(0, 0, ARENA_SIZE, ARENA_SIZE);
-      
-      // Batch particle updates and rendering
-      const aliveparticles: Particle[] = [];
-      
-      // Update all particles first
-      for (let i = 0; i < particlesRef.current.length; i++) {
-        const p = particlesRef.current[i];
-        p.life++;
-        p.x += p.vx;
-        p.y += p.vy;
-        
-        const alpha = (1 - p.life / p.maxLife) * p.intensity;
-        if (alpha > 0.05) { // Skip nearly invisible particles
-          aliveparticles.push(p);
-        }
-      }
-      
-      // Render all particles in batches
-      ctx.globalCompositeOperation = 'lighter'; // Additive blending for glow effect
-      
-      for (let i = 0; i < aliveparticles.length; i++) {
-        const p = aliveparticles[i];
-        const alpha = (1 - p.life / p.maxLife) * p.intensity;
-        
-        // Simplified single-pass rendering
-        const size = 18 + p.intensity * 6;
-        const gradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, size);
-        gradient.addColorStop(0, `rgba(196, 181, 253, ${alpha * 0.9})`);
-        gradient.addColorStop(0.4, `rgba(139, 92, 246, ${alpha * 0.5})`);
-        gradient.addColorStop(0.7, `rgba(99, 102, 241, ${alpha * 0.2})`);
-        gradient.addColorStop(1, 'rgba(59, 130, 246, 0)');
-        
-        ctx.fillStyle = gradient;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, size, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      
-      ctx.globalCompositeOperation = 'source-over'; // Reset blending
-      particlesRef.current = aliveparticles;
-      
-      frameIdRef.current = requestAnimationFrame(animate);
-    };
-    
-    animate();
-    
-    return () => {
-      if (frameIdRef.current) {
-        cancelAnimationFrame(frameIdRef.current);
-      }
-    };
-  }, [spikes]);
-  
-  return (
-    <canvas
-      ref={canvasRef}
-      width={ARENA_SIZE}
-      height={ARENA_SIZE}
-      className="absolute inset-0 pointer-events-none"
-      style={{ zIndex: 1 }}
-    />
-  );
-});
 
 // Single target component
 const Target = memo(function Target({ 
@@ -347,11 +192,6 @@ export const CenterOutArena = memo(function CenterOutArena() {
   const currentPacket = useStore((state) => state.currentPacket);
   const decoderOutput = useStore((state) => state.decoderOutput);
   
-  // Extract spike data
-  const spikes = useMemo(() => {
-    return currentPacket?.data?.spikes?.spike_counts || null;
-  }, [currentPacket]);
-  
   // Active target (based on intention)
   const activeTarget = useMemo(() => {
     if (!currentPacket?.data?.intention) return null;
@@ -393,13 +233,6 @@ export const CenterOutArena = memo(function CenterOutArena() {
     return Math.min(d / (ARENA_SIZE / 2), 1);
   }, [groundTruthPos, decodedPos]);
   
-  // Calculate average spike rate
-  const spikeRate = useMemo(() => {
-    if (!spikes || spikes.length === 0) return 0;
-    const total = spikes.reduce((sum, s) => sum + s, 0);
-    return total / spikes.length;
-  }, [spikes]);
-  
   return (
     <div 
       className="relative rounded-2xl overflow-hidden"
@@ -411,9 +244,6 @@ export const CenterOutArena = memo(function CenterOutArena() {
         willChange: 'transform', // Performance hint
       }}
     >
-      {/* Neural spike particle background */}
-      <NeuralBackground spikes={spikes} />
-      
       {/* Grid overlay */}
       <svg className="absolute inset-0 pointer-events-none opacity-20">
         <defs>
@@ -480,7 +310,7 @@ export const CenterOutArena = memo(function CenterOutArena() {
       />
       
       {/* Error magnitude display */}
-      <div className="absolute bottom-3 left-3 right-3 space-y-1.5">
+      <div className="absolute bottom-3 left-3 right-3">
         {/* Error bar */}
         <div className="flex items-center gap-2">
           <span className="text-[10px] text-gray-500 uppercase tracking-wider">Error</span>
@@ -495,20 +325,6 @@ export const CenterOutArena = memo(function CenterOutArena() {
           </div>
           <span className="text-[10px] font-mono font-bold" style={{ color: errorToColor(error) }}>
             {(error * 100).toFixed(1)}%
-          </span>
-        </div>
-        
-        {/* Neural activity indicator */}
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] text-gray-500 uppercase tracking-wider">Neural</span>
-          <div className="flex-1 h-1.5 bg-gray-800 rounded-full overflow-hidden">
-            <div
-              className="h-full rounded-full bg-gradient-to-r from-purple-500 via-indigo-500 to-blue-500 transition-all duration-100"
-              style={{ width: `${Math.min(spikeRate * 10, 100)}%` }}
-            />
-          </div>
-          <span className="text-[9px] font-mono text-purple-400">
-            {spikeRate.toFixed(1)} Hz
           </span>
         </div>
       </div>
