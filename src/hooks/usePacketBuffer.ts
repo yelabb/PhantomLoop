@@ -17,7 +17,7 @@ export function usePacketBuffer() {
     if (packetBuffer.length === 0) return;
 
     const latestPacket = packetBuffer[packetBuffer.length - 1];
-    const currentSequence = latestPacket.metadata.packet_id;
+    const currentSequence = latestPacket.data.sequence_number;
 
     // Detect gaps in sequence numbers
     if (lastSequenceRef.current !== -1) {

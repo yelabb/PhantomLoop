@@ -2,7 +2,6 @@
 
 import { useEffect } from 'react';
 import { useStore } from '../store';
-import { STREAM_CONFIG } from '../utils/constants';
 
 export function useWebSocket() {
   const { 

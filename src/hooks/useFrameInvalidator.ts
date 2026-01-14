@@ -11,7 +11,7 @@ import { useThree } from '@react-three/fiber';
  */
 export function useFrameInvalidator(targetFPS: number = 60) {
   const { invalidate } = useThree();
-  const frameRef = useRef<number>();
+  const frameRef = useRef<number>(0);
   const lastTimeRef = useRef(0);
   const frameInterval = 1000 / targetFPS;
 

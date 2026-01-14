@@ -5,7 +5,6 @@ import { Arena } from './components/Arena';
 import { Dashboard } from './components/Dashboard';
 import { ResearchDashboard } from './components/ResearchDashboard';
 import { WelcomeScreen } from './components/WelcomeScreen';
-import { useWebSocket } from './hooks/useWebSocket';
 import { useMessagePack } from './hooks/useMessagePack';
 import { useDecoder } from './hooks/useDecoder';
 import { usePerformance } from './hooks/usePerformance';
