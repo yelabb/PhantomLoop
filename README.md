@@ -10,7 +10,7 @@
 
 It replays high-fidelity neural recordings (MC_Maze dataset) to simulate a live cortex, injecting network latency, signal drift, and noise. Your goal: **connect your decoder, close the loop, and maintain synchronization with the intention signal.**
 
-⚠️ **If your inference latency exceeds 25ms, the system rejects you.**
+<img width="600"  alt="screenshot" src="https://github.com/user-attachments/assets/adbde82e-53e0-4b61-b572-c149f4ff8a01" />
 
 ---
 
@@ -383,3 +383,4 @@ MIT License. See [LICENSE](LICENSE) for details.
 **Built with ❤️ for the BCI community**
 
 *"Close the loop. Collapse the triangle. Master the gauntlet."*
+
