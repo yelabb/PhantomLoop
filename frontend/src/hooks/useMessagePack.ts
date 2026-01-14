@@ -1,45 +1,53 @@
-// MessagePack decoder hook
+// MessagePack decoder hook - Optimized with selectors
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import msgpack from 'msgpack-lite';
 import { useStore } from '../store';
 import type { StreamPacket, MetadataMessage } from '../types/packets';
 
+// Use selectors to prevent unnecessary re-renders
+const selectWebSocket = (state: ReturnType<typeof useStore.getState>) => state.websocket;
+const selectIsConnected = (state: ReturnType<typeof useStore.getState>) => state.isConnected;
+const selectReceivePacket = (state: ReturnType<typeof useStore.getState>) => state.receivePacket;
+const selectUpdateNetworkLatency = (state: ReturnType<typeof useStore.getState>) => state.updateNetworkLatency;
+
 export function useMessagePack() {
-  const { 
-    websocket, 
-    isConnected,
-    receivePacket,
-    updateNetworkLatency 
-  } = useStore();
+  const websocket = useStore(selectWebSocket);
+  const isConnected = useStore(selectIsConnected);
+  const receivePacket = useStore(selectReceivePacket);
+  const updateNetworkLatency = useStore(selectUpdateNetworkLatency);
+  
+  // Track packet count for throttled logging
+  const packetCountRef = useRef(0);
 
   useEffect(() => {
     if (!websocket || !isConnected) {
-      console.log('[PhantomLoop] 📭 MessagePack hook: No WebSocket or not connected');
       return;
     }
 
-    console.log('[PhantomLoop] 📬 MessagePack hook: Listening for messages...');
+    console.log('[PhantomLoop] 📬 MessagePack: Listening for messages...');
 
     const handleMessage = (event: MessageEvent) => {
-      console.log('[PhantomLoop] 📨 Received message, size:', event.data.byteLength, 'bytes');
-      
       try {
         const receiveTime = performance.now();
         
         // Decode MessagePack binary data
         const decoded = msgpack.decode(new Uint8Array(event.data));
-        console.log('[PhantomLoop] ✅ Decoded packet:', JSON.stringify(decoded).substring(0, 200));
         
         if (decoded.type === 'data') {
           const packet = decoded as StreamPacket;
+          packetCountRef.current++;
           
           // Calculate network latency using packet timestamp
           if (packet.data?.timestamp) {
             const packetTimestamp = packet.data.timestamp * 1000; // Convert to ms
             const latency = receiveTime - packetTimestamp;
-            console.log('[PhantomLoop] 📊 Packet #', packet.data.sequence_number, 'latency:', latency.toFixed(2), 'ms');
             updateNetworkLatency(Math.max(0, latency));
+          }
+          
+          // Log every 100th packet to reduce console spam
+          if (packetCountRef.current % 100 === 0) {
+            console.log(`[PhantomLoop] 📊 Received ${packetCountRef.current} packets`);
           }
           
           // Update store
@@ -51,16 +59,14 @@ export function useMessagePack() {
         }
       } catch (error) {
         console.error('[PhantomLoop] ❌ MessagePack decode error:', error);
-        console.error('[PhantomLoop] Raw data preview:', new Uint8Array(event.data).slice(0, 50));
       }
     };
 
     websocket.addEventListener('message', handleMessage);
-    console.log('[PhantomLoop] ✅ Message listener attached');
 
     return () => {
       websocket.removeEventListener('message', handleMessage);
-      console.log('[PhantomLoop] 🔇 Message listener removed');
+      console.log(`[PhantomLoop] 🔇 Disconnected after ${packetCountRef.current} packets`);
     };
   }, [websocket, isConnected, receivePacket, updateNetworkLatency]);
 }

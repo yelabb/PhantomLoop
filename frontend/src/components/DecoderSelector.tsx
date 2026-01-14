@@ -4,6 +4,20 @@ import { memo, useEffect, useCallback } from 'react';
 import { useStore } from '../store';
 import { baselineDecoders } from '../decoders/baselines';
 
+// Separate component for latency display to prevent full re-renders
+const LatencyDisplay = memo(function LatencyDisplay() {
+  // Use metrics slice for latency (updates frequently)
+  const decoderLatency = useStore((state) => state.decoderLatency);
+  
+  if (decoderLatency === 0) return null;
+  
+  return (
+    <p className="mt-2 font-mono">
+      Latency: {decoderLatency.toFixed(2)}ms
+    </p>
+  );
+});
+
 export const DecoderSelector = memo(function DecoderSelector() {
   // Use individual selectors
   const activeDecoder = useStore((state) => state.activeDecoder);
@@ -34,7 +48,6 @@ export const DecoderSelector = memo(function DecoderSelector() {
         {availableDecoders.map(decoder => (
           <option key={decoder.id} value={decoder.id}>
             {decoder.name}
-            {decoder.avgLatency && ` (${decoder.avgLatency.toFixed(1)}ms)`}
           </option>
         ))}
       </select>
@@ -43,11 +56,6 @@ export const DecoderSelector = memo(function DecoderSelector() {
         <div className="mt-3 text-xs text-gray-400">
           <p className="font-medium text-loopback mb-1">{activeDecoder.name}</p>
           <p>{activeDecoder.description}</p>
-          {activeDecoder.lastLatency && (
-            <p className="mt-2 font-mono">
-              Last: {activeDecoder.lastLatency.toFixed(2)}ms
-            </p>
-          )}
         </div>
       )}
     </div>

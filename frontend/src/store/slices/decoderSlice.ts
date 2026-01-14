@@ -1,4 +1,4 @@
-// Decoder state slice
+// Decoder state slice - Optimized to separate high-frequency updates
 
 import type { StateCreator } from 'zustand';
 import type { Decoder, DecoderOutput } from '../../types/decoders';
@@ -30,31 +30,13 @@ export const createDecoderSlice: StateCreator<
     console.log(`[PhantomLoop] Decoder changed:`, decoder?.name || 'None');
     set({ 
       activeDecoder: decoder,
-      decoderOutput: null, // Reset output when changing decoders
+      decoderOutput: null,
     });
   },
 
   updateDecoderOutput: (output: DecoderOutput) => {
-    const { activeDecoder } = get();
-    
-    // Update decoder's latency metrics
-    if (activeDecoder) {
-      const avgLatency = activeDecoder.avgLatency || 0;
-      const newAvgLatency = avgLatency === 0 
-        ? output.latency 
-        : (avgLatency * 0.9 + output.latency * 0.1); // Exponential moving average
-
-      set({
-        activeDecoder: {
-          ...activeDecoder,
-          avgLatency: newAvgLatency,
-          lastLatency: output.latency,
-        },
-        decoderOutput: output,
-      });
-    } else {
-      set({ decoderOutput: output });
-    }
+    // Only update the output, don't touch activeDecoder
+    set({ decoderOutput: output });
   },
 
   registerDecoder: (decoder: Decoder) => {

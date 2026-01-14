@@ -3,19 +3,47 @@
 import type { DecoderInput, DecoderOutput, Decoder } from '../types/decoders';
 import { PERFORMANCE_THRESHOLDS } from '../utils/constants';
 
+// Cache compiled decoder functions to avoid recompiling on every call
+const compiledDecoders = new Map<string, (input: DecoderInput) => { x: number; y: number; vx?: number; vy?: number; confidence?: number }>();
+
+function getCompiledDecoder(decoder: Decoder): (input: DecoderInput) => { x: number; y: number; vx?: number; vy?: number; confidence?: number } {
+  const cacheKey = `${decoder.id}:${decoder.code}`;
+  
+  if (!compiledDecoders.has(cacheKey)) {
+    console.log(`[Decoder] Compiling decoder: ${decoder.name}`);
+    const fn = new Function('input', decoder.code!) as (input: DecoderInput) => { x: number; y: number; vx?: number; vy?: number; confidence?: number };
+    compiledDecoders.set(cacheKey, fn);
+  }
+  
+  return compiledDecoders.get(cacheKey)!;
+}
+
+// Clear cache when decoder changes
+export function clearDecoderCache(decoderId?: string) {
+  if (decoderId) {
+    for (const key of compiledDecoders.keys()) {
+      if (key.startsWith(decoderId + ':')) {
+        compiledDecoders.delete(key);
+      }
+    }
+  } else {
+    compiledDecoders.clear();
+  }
+}
+
 /**
  * Execute a JavaScript decoder with timeout protection
  */
-export async function executeDecoder(
+export function executeDecoder(
   decoder: Decoder,
   input: DecoderInput
-): Promise<DecoderOutput> {
+): DecoderOutput {
   const startTime = performance.now();
 
   try {
     if (decoder.type === 'javascript' && decoder.code) {
-      // Compile and execute JavaScript decoder
-      const decoderFunction = new Function('input', decoder.code);
+      // Use cached compiled function
+      const decoderFunction = getCompiledDecoder(decoder);
       const result = decoderFunction(input);
       
       const latency = performance.now() - startTime;
@@ -35,7 +63,14 @@ export async function executeDecoder(
       };
     }
 
-    throw new Error(`Unsupported decoder type: ${decoder.type}`);
+    // Unsupported decoder type - passthrough
+    return {
+      x: input.kinematics.x,
+      y: input.kinematics.y,
+      vx: input.kinematics.vx,
+      vy: input.kinematics.vy,
+      latency: performance.now() - startTime,
+    };
   } catch (error) {
     console.error(`[Decoder] Execution error in ${decoder.name}:`, error);
     
