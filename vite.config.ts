@@ -15,6 +15,7 @@ export default defineConfig({
   define: {
     // Fix for CommonJS modules in ESM context
     'global': 'globalThis',
+    'process.env': '{}',
   },
   optimizeDeps: {
     include: [
@@ -24,6 +25,8 @@ export default defineConfig({
       '@tensorflow/tfjs-backend-webgl',
       'long',
       'seedrandom',
+      'buffer',
+      'msgpack-lite',
     ],
     esbuildOptions: {
       target: 'esnext',

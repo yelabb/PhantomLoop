@@ -1,13 +1,12 @@
+import { Buffer } from 'buffer';
+
+// Polyfill Buffer for msgpack-lite in production builds
+globalThis.Buffer = Buffer;
+
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import './index.css';
 import App from './App.tsx';
-import { Buffer } from 'buffer';
-
-// Polyfill Buffer for msgpack-lite in production builds
-if (typeof window !== 'undefined') {
-  window.Buffer = Buffer;
-}
 
 // Initialize TensorFlow.js backends (for future ML decoders)
 async function initializeTensorFlow() {
