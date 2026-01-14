@@ -24,17 +24,6 @@ export interface DecoderState {
   isProcessing: boolean;
 }
 
-export interface VisualizationSettings {
-  showPhantom: boolean;
-  showBioLink: boolean;
-  showLoopBack: boolean;
-  showTrails: boolean;
-  showTarget: boolean;
-  showGrid: boolean;
-  cameraMode: 'top' | 'perspective' | 'side';
-  trailLength: number;
-}
-
 export interface PerformanceMetrics {
   fps: number;
   networkLatency: number;
@@ -49,6 +38,5 @@ export interface AppState {
   connection: ConnectionState;
   stream: StreamState;
   decoder: DecoderState;
-  visualization: VisualizationSettings;
   metrics: PerformanceMetrics;
 }
