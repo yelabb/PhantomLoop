@@ -72,12 +72,27 @@ export const ResearchDashboard = memo(function ResearchDashboard() {
   const decoderOutput = useStore((state) => state.decoderOutput);
   const updateAccuracy = useStore((state) => state.updateAccuracy);
   
-  // Panel ordering state
-  const [leftPanelOrder, setLeftPanelOrder] = useState<PanelId[]>(['decoder']);
-  const [rightPanelOrder, setRightPanelOrder] = useState<PanelId[]>(['accuracy', 'waterfall', 'grid', 'stats']);
+  // Panel ordering state with localStorage persistence
+  const [leftPanelOrder, setLeftPanelOrder] = useState<PanelId[]>(() => {
+    const saved = localStorage.getItem('phantomloop-left-panels');
+    return saved ? JSON.parse(saved) : ['decoder'];
+  });
+  const [rightPanelOrder, setRightPanelOrder] = useState<PanelId[]>(() => {
+    const saved = localStorage.getItem('phantomloop-right-panels');
+    return saved ? JSON.parse(saved) : ['accuracy', 'waterfall', 'grid', 'stats'];
+  });
   const [draggedPanel, setDraggedPanel] = useState<PanelId | null>(null);
   const [dragSource, setDragSource] = useState<'left' | 'right' | null>(null);
   const [dragOverSidebar, setDragOverSidebar] = useState<'left' | 'right' | null>(null);
+  
+  // Persist panel orders to localStorage
+  useEffect(() => {
+    localStorage.setItem('phantomloop-left-panels', JSON.stringify(leftPanelOrder));
+  }, [leftPanelOrder]);
+  
+  useEffect(() => {
+    localStorage.setItem('phantomloop-right-panels', JSON.stringify(rightPanelOrder));
+  }, [rightPanelOrder]);
   
   // Calculate and update accuracy continuously
   useEffect(() => {

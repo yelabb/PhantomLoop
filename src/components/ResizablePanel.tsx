@@ -23,11 +23,19 @@ export const ResizablePanel = memo(function ResizablePanel({
   onPanelDragLeave,
   isDragTarget = false,
 }: ResizablePanelProps) {
-  const [width, setWidth] = useState(defaultWidth);
+  const [width, setWidth] = useState(() => {
+    const saved = localStorage.getItem(`phantomloop-${side}-width`);
+    return saved ? parseInt(saved, 10) : defaultWidth;
+  });
   const [isResizing, setIsResizing] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const startXRef = useRef<number>(0);
   const startWidthRef = useRef<number>(0);
+  
+  // Persist width to localStorage
+  useEffect(() => {
+    localStorage.setItem(`phantomloop-${side}-width`, width.toString());
+  }, [width, side]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
