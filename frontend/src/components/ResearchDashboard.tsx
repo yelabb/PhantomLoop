@@ -4,7 +4,6 @@
 import { memo, useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CenterOutArena } from './visualization/CenterOutArena';
-import { PerformanceRing } from './visualization/PerformanceRing';
 import { AccuracyGauge } from './visualization/AccuracyGauge';
 import { QuickStats } from './visualization/QuickStats';
 import { NeuronActivityGrid } from './visualization/NeuronActivityGrid';
@@ -36,65 +35,6 @@ const StatusBadge = memo(function StatusBadge({
         transition={{ repeat: Infinity, duration: 1.5 }}
       />
       <span className="text-xs font-medium text-gray-300">{label}</span>
-    </div>
-  );
-});
-
-// Main performance indicator - big and visible
-const MainPerformanceDisplay = memo(function MainPerformanceDisplay() {
-  const currentPacket = useStore((state) => state.currentPacket);
-  const decoderOutput = useStore((state) => state.decoderOutput);
-  const activeDecoder = useStore((state) => state.activeDecoder);
-  const updateAccuracy = useStore((state) => state.updateAccuracy);
-  
-  // Calculate accuracy
-  const { accuracy, error } = useMemo(() => {
-    if (!currentPacket?.data?.kinematics || !decoderOutput) {
-      return { accuracy: 0, error: 0 };
-    }
-    
-    const { x: gtX, y: gtY } = currentPacket.data.kinematics;
-    const { x: decX, y: decY } = decoderOutput;
-    
-    // Calculate normalized error (0-1, where 0 is perfect)
-    const dist = Math.sqrt((gtX - decX) ** 2 + (gtY - decY) ** 2);
-    const normalizedError = Math.min(dist / 200, 1);
-    const acc = Math.max(0, 1 - normalizedError);
-    
-    return { accuracy: acc, error: normalizedError };
-  }, [currentPacket?.data?.kinematics, decoderOutput]);
-  
-  // Update store with accuracy
-  useEffect(() => {
-    if (decoderOutput) {
-      updateAccuracy(accuracy, error);
-    }
-  }, [accuracy, error, decoderOutput, updateAccuracy]);
-  
-  if (!activeDecoder) {
-    return (
-      <div className="flex flex-col items-center justify-center p-8 bg-gray-900/50 rounded-2xl border border-gray-700/50">
-        <div className="text-4xl mb-4">🧠</div>
-        <span className="text-lg font-semibold text-gray-400">Select a Decoder</span>
-        <span className="text-sm text-gray-500 mt-1">to begin analysis</span>
-      </div>
-    );
-  }
-  
-  return (
-    <div className="flex flex-col items-center gap-6">
-      <PerformanceRing
-        accuracy={accuracy}
-        error={error}
-        size={180}
-        showLabels
-      />
-      
-      <div className="text-center">
-        <span className="text-xs text-gray-500 uppercase tracking-wider">
-          Decoder Performance
-        </span>
-      </div>
     </div>
   );
 });
@@ -166,6 +106,26 @@ export const ResearchDashboard = memo(function ResearchDashboard() {
   const totalLatency = useStore((state) => state.totalLatency);
   const currentAccuracy = useStore((state) => state.currentAccuracy);
   const currentError = useStore((state) => state.currentError);
+  const currentPacket = useStore((state) => state.currentPacket);
+  const decoderOutput = useStore((state) => state.decoderOutput);
+  const updateAccuracy = useStore((state) => state.updateAccuracy);
+  
+  // Calculate and update accuracy continuously
+  useEffect(() => {
+    if (!currentPacket?.data?.kinematics || !decoderOutput) {
+      return;
+    }
+    
+    const { x: gtX, y: gtY } = currentPacket.data.kinematics;
+    const { x: decX, y: decY } = decoderOutput;
+    
+    // Calculate normalized error (0-1, where 0 is perfect)
+    const dist = Math.sqrt((gtX - decX) ** 2 + (gtY - decY) ** 2);
+    const normalizedError = Math.min(dist / 200, 1);
+    const accuracy = Math.max(0, 1 - normalizedError);
+    
+    updateAccuracy(accuracy, normalizedError);
+  }, [currentPacket?.data?.kinematics, decoderOutput, updateAccuracy]);
   
   // Overall system status
   const systemStatus = useMemo(() => {
@@ -221,24 +181,6 @@ export const ResearchDashboard = memo(function ResearchDashboard() {
           
           {/* Right Sidebar - Metrics */}
           <aside className="dashboard-sidebar w-96 shrink-0 overflow-y-auto scrollbar-hide">
-            {/* Performance Overview Card */}
-            <div className="dashboard-card p-6">
-              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">
-                Performance Overview
-              </h3>
-              <div className="flex justify-center">
-                <MainPerformanceDisplay />
-              </div>
-            </div>
-            
-            {/* Quick Stats Card */}
-            <div className="dashboard-card p-5">
-              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">
-                Live Metrics
-              </h3>
-              <QuickStats />
-            </div>
-            
             {/* Accuracy History Card */}
             <div className="dashboard-card p-5">
               <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">
@@ -257,6 +199,14 @@ export const ResearchDashboard = memo(function ResearchDashboard() {
                 maxNeurons={96}
                 showLabels={true}
               />
+            </div>
+            
+            {/* Quick Stats Card */}
+            <div className="dashboard-card p-5">
+              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">
+                Live Metrics
+              </h3>
+              <QuickStats />
             </div>
           </aside>
         </div>
