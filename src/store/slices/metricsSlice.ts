@@ -25,6 +25,7 @@ export interface MetricsSlice {
   
   // Session-wide statistics for research (tracks ENTIRE session)
   sessionAccuracyAll: number[]; // ALL valid samples for the entire session
+  sessionErrorAll: number[]; // ALL valid error samples for the entire session
   sessionMinAccuracy: number;
   sessionMaxAccuracy: number;
   sessionMinError: number;
@@ -66,6 +67,7 @@ export const createMetricsSlice: StateCreator<
   
   // Session-wide statistics
   sessionAccuracyAll: [],
+  sessionErrorAll: [],
   sessionMinAccuracy: 1,
   sessionMaxAccuracy: 0,
   sessionMinError: 1,
@@ -135,6 +137,7 @@ export const createMetricsSlice: StateCreator<
         
         // Session-wide tracking - ALL valid samples
         updates.sessionAccuracyAll = [...prev.sessionAccuracyAll, accuracy];
+        updates.sessionErrorAll = [...prev.sessionErrorAll, error];
         updates.sessionSum = prev.sessionSum + accuracy;
         
         // Update session-wide min/max
@@ -171,6 +174,7 @@ export const createMetricsSlice: StateCreator<
       trialCount: 0,
       successfulTrials: 0,
       sessionAccuracyAll: [],
+      sessionErrorAll: [],
       sessionMinAccuracy: 1,
       sessionMaxAccuracy: 0,
       sessionMinError: 1,

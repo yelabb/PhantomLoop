@@ -191,7 +191,7 @@ export const AccuracyGauge = memo(function AccuracyGauge({
 }: AccuracyGaugeProps) {
   // Get history from store (maintained in metricsSlice)
   const accuracyHistory = useStore((state) => state.accuracyHistory);
-  const errorHistory = useStore((state) => state.errorHistory);
+  const sessionErrorAll = useStore((state) => state.sessionErrorAll);
   
   // Get session-wide statistics for research (ENTIRE session, not rolling window)
   const sessionAccuracyAll = useStore((state) => state.sessionAccuracyAll);
@@ -328,7 +328,7 @@ export const AccuracyGauge = memo(function AccuracyGauge({
         <span className="text-xs text-gray-500 uppercase tracking-wider">
           Error Distribution
         </span>
-        <ErrorHistogram errors={errorHistory} height={40} />
+        <ErrorHistogram errors={sessionErrorAll} height={40} />
         <div className="flex justify-between text-xs text-gray-600 px-1">
           <span>0%</span>
           <span>Error</span>
