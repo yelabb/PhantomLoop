@@ -179,27 +179,56 @@ export const AccuracyGauge = memo(function AccuracyGauge({
   const accuracyHistory = useStore((state) => state.accuracyHistory);
   const errorHistory = useStore((state) => state.errorHistory);
   
-  // Statistics
+  // Get session-wide statistics for research (ENTIRE session, not rolling window)
+  const sessionAccuracyAll = useStore((state) => state.sessionAccuracyAll);
+  const sessionMinAccuracy = useStore((state) => state.sessionMinAccuracy);
+  const sessionSum = useStore((state) => state.sessionSum);
+  const validSampleCount = useStore((state) => state.validSampleCount);
+  const totalSampleCount = useStore((state) => state.totalSampleCount);
+  
+  // Statistics - ALL calculated from ENTIRE session, not rolling window
   const stats = useMemo(() => {
-    if (accuracyHistory.length === 0) return { avg: 0, min: 0, max: 0, trend: 0 };
+    if (sessionAccuracyAll.length === 0) {
+      return { 
+        avg: 0, 
+        min: 0, 
+        p10: 0,
+        trend: 0,
+        stdDev: 0,
+      };
+    }
     
-    const avg = accuracyHistory.reduce((a, b) => a + b, 0) / accuracyHistory.length;
-    const min = Math.min(...accuracyHistory);
-    const max = Math.max(...accuracyHistory);
+    // Session-wide average (efficient calculation using running sum)
+    const avg = sessionSum / sessionAccuracyAll.length;
     
-    // Calculate trend (positive = improving)
-    const recentHalf = accuracyHistory.slice(-Math.floor(accuracyHistory.length / 2));
-    const olderHalf = accuracyHistory.slice(0, Math.floor(accuracyHistory.length / 2));
-    const recentAvg = recentHalf.length > 0 
-      ? recentHalf.reduce((a, b) => a + b, 0) / recentHalf.length 
-      : 0;
-    const olderAvg = olderHalf.length > 0 
-      ? olderHalf.reduce((a, b) => a + b, 0) / olderHalf.length 
-      : 0;
-    const trend = recentAvg - olderAvg;
+    // Session-wide min
+    const min = sessionMinAccuracy;
     
-    return { avg, min, max, trend };
-  }, [accuracyHistory]);
+    // Session-wide 10th percentile
+    const sorted = [...sessionAccuracyAll].sort((a, b) => a - b);
+    const p10Index = Math.max(0, Math.floor(sorted.length * 0.1));
+    const p10 = sorted[p10Index] ?? 0;
+    
+    // Session-wide standard deviation
+    const variance = sessionAccuracyAll.reduce((sum, val) => sum + Math.pow(val - avg, 2), 0) / sessionAccuracyAll.length;
+    const stdDev = Math.sqrt(variance);
+    
+    // Trend from recent rolling window (still useful for short-term changes)
+    let trend = 0;
+    if (accuracyHistory.length > 1) {
+      const recentHalf = accuracyHistory.slice(-Math.floor(accuracyHistory.length / 2));
+      const olderHalf = accuracyHistory.slice(0, Math.floor(accuracyHistory.length / 2));
+      const recentAvg = recentHalf.length > 0 
+        ? recentHalf.reduce((a, b) => a + b, 0) / recentHalf.length 
+        : 0;
+      const olderAvg = olderHalf.length > 0 
+        ? olderHalf.reduce((a, b) => a + b, 0) / olderHalf.length 
+        : 0;
+      trend = recentAvg - olderAvg;
+    }
+    
+    return { avg, min, p10, trend, stdDev };
+  }, [sessionAccuracyAll, sessionMinAccuracy, sessionSum, accuracyHistory]);
   
   // Trend color and icon
   const trendColor = stats.trend > 0.02 ? '#22c55e' : stats.trend < -0.02 ? '#ef4444' : '#6b7280';
@@ -246,11 +275,17 @@ export const AccuracyGauge = memo(function AccuracyGauge({
       </div>
       
       {/* Stats row */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-4 gap-2">
         <div className="flex flex-col items-center p-3 bg-gray-800/50 rounded-xl border border-gray-700/30">
           <span className="text-xs text-gray-500 mb-1">AVG</span>
           <span className="text-sm font-mono font-semibold text-gray-300">
             {(stats.avg * 100).toFixed(0)}%
+          </span>
+        </div>
+        <div className="flex flex-col items-center p-3 bg-gray-800/50 rounded-xl border border-gray-700/30">
+          <span className="text-xs text-gray-500 mb-1">P10</span>
+          <span className="text-sm font-mono font-semibold text-orange-400">
+            {(stats.p10 * 100).toFixed(0)}%
           </span>
         </div>
         <div className="flex flex-col items-center p-3 bg-gray-800/50 rounded-xl border border-gray-700/30">
@@ -260,11 +295,18 @@ export const AccuracyGauge = memo(function AccuracyGauge({
           </span>
         </div>
         <div className="flex flex-col items-center p-3 bg-gray-800/50 rounded-xl border border-gray-700/30">
-          <span className="text-xs text-gray-500 mb-1">MAX</span>
-          <span className="text-sm font-mono font-semibold text-green-400">
-            {(stats.max * 100).toFixed(0)}%
+          <span className="text-xs text-gray-500 mb-1">σ</span>
+          <span className="text-sm font-mono font-semibold text-blue-400">
+            {(stats.stdDev * 100).toFixed(0)}%
           </span>
         </div>
+      </div>
+      
+      {/* Sample count for research */}
+      <div className="flex justify-between items-center px-2 text-xs text-gray-600">
+        <span>Valid: {validSampleCount}</span>
+        <span>Skipped: {totalSampleCount - validSampleCount}</span>
+        <span>Total: {totalSampleCount}</span>
       </div>
       
       {/* Error distribution */}

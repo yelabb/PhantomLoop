@@ -119,12 +119,24 @@ export const ResearchDashboard = memo(function ResearchDashboard() {
     const { x: gtX, y: gtY } = currentPacket.data.kinematics;
     const { x: decX, y: decY } = decoderOutput;
     
+    // Exclude ANY sample where ANY coordinate is 0 or very close to 0 (initialization/missing data)
+    // This is more aggressive but necessary to eliminate bias completely
+    const threshold = 0.01; // Consider values < 0.01 as effectively zero
+    const hasZeroCoordinate = Math.abs(gtX) < threshold || Math.abs(gtY) < threshold || 
+                               Math.abs(decX) < threshold || Math.abs(decY) < threshold;
+    
+    if (hasZeroCoordinate) {
+      // Track but don't include in metrics
+      updateAccuracy(0, 1, false);
+      return;
+    }
+    
     // Calculate normalized error (0-1, where 0 is perfect)
     const dist = Math.sqrt((gtX - decX) ** 2 + (gtY - decY) ** 2);
     const normalizedError = Math.min(dist / 200, 1);
     const accuracy = Math.max(0, 1 - normalizedError);
     
-    updateAccuracy(accuracy, normalizedError);
+    updateAccuracy(accuracy, normalizedError, true);
   }, [currentPacket?.data?.kinematics, decoderOutput, updateAccuracy]);
   
   // Overall system status

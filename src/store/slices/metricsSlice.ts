@@ -23,11 +23,21 @@ export interface MetricsSlice {
   trialCount: number;
   successfulTrials: number;
   
+  // Session-wide statistics for research (tracks ENTIRE session)
+  sessionAccuracyAll: number[]; // ALL valid samples for the entire session
+  sessionMinAccuracy: number;
+  sessionMaxAccuracy: number;
+  sessionMinError: number;
+  sessionMaxError: number;
+  sessionSum: number; // Running sum for efficient avg calculation
+  validSampleCount: number; // Excludes (0,0) samples
+  totalSampleCount: number; // All samples including skipped ones
+  
   updateFPS: (fps: number) => void;
   updateNetworkLatency: (latency: number) => void;
   updateDecoderLatency: (latency: number) => void;
   incrementDroppedPackets: () => void;
-  updateAccuracy: (accuracy: number, error: number) => void;
+  updateAccuracy: (accuracy: number, error: number, isValid?: boolean) => void;
   recordTrialResult: (success: boolean) => void;
   resetMetrics: () => void;
 }
@@ -53,6 +63,16 @@ export const createMetricsSlice: StateCreator<
   errorHistory: [],
   trialCount: 0,
   successfulTrials: 0,
+  
+  // Session-wide statistics
+  sessionAccuracyAll: [],
+  sessionMinAccuracy: 1,
+  sessionMaxAccuracy: 0,
+  sessionMinError: 1,
+  sessionMaxError: 0,
+  sessionSum: 0,
+  validSampleCount: 0,
+  totalSampleCount: 0,
 
   updateFPS: (fps: number) => {
     set({ fps });
@@ -96,18 +116,35 @@ export const createMetricsSlice: StateCreator<
     }));
   },
 
-  updateAccuracy: (accuracy: number, error: number) => {
-    const { accuracyHistory, errorHistory } = get();
-    
-    // Maintain rolling window
-    const newAccuracyHistory = [...accuracyHistory, accuracy].slice(-ACCURACY_HISTORY_LENGTH);
-    const newErrorHistory = [...errorHistory, error].slice(-ACCURACY_HISTORY_LENGTH);
-    
-    set({
-      currentAccuracy: accuracy,
-      currentError: error,
-      accuracyHistory: newAccuracyHistory,
-      errorHistory: newErrorHistory,
+  updateAccuracy: (accuracy: number, error: number, isValid: boolean = true) => {
+    set((prev) => {
+      const updates: Partial<MetricsSlice> = {
+        totalSampleCount: prev.totalSampleCount + 1,
+      };
+      
+      // Only update if valid (not a (0,0) sample)
+      if (isValid) {
+        const newAccuracyHistory = [...prev.accuracyHistory, accuracy].slice(-ACCURACY_HISTORY_LENGTH);
+        const newErrorHistory = [...prev.errorHistory, error].slice(-ACCURACY_HISTORY_LENGTH);
+        
+        updates.currentAccuracy = accuracy;
+        updates.currentError = error;
+        updates.accuracyHistory = newAccuracyHistory;
+        updates.errorHistory = newErrorHistory;
+        updates.validSampleCount = prev.validSampleCount + 1;
+        
+        // Session-wide tracking - ALL valid samples
+        updates.sessionAccuracyAll = [...prev.sessionAccuracyAll, accuracy];
+        updates.sessionSum = prev.sessionSum + accuracy;
+        
+        // Update session-wide min/max
+        updates.sessionMinAccuracy = Math.min(prev.sessionMinAccuracy, accuracy);
+        updates.sessionMaxAccuracy = Math.max(prev.sessionMaxAccuracy, accuracy);
+        updates.sessionMinError = Math.min(prev.sessionMinError, error);
+        updates.sessionMaxError = Math.max(prev.sessionMaxError, error);
+      }
+      
+      return updates;
     });
   },
 
@@ -133,6 +170,14 @@ export const createMetricsSlice: StateCreator<
       errorHistory: [],
       trialCount: 0,
       successfulTrials: 0,
+      sessionAccuracyAll: [],
+      sessionMinAccuracy: 1,
+      sessionMaxAccuracy: 0,
+      sessionMinError: 1,
+      sessionMaxError: 0,
+      sessionSum: 0,
+      validSampleCount: 0,
+      totalSampleCount: 0,
     });
   },
 });
