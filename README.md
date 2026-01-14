@@ -13,7 +13,8 @@
 
 It replays high-fidelity neural recordings (MC_Maze dataset) to simulate a live cortex, injecting network latency, signal drift, and noise. Your goal: **connect your decoder, close the loop, and maintain synchronization with the intention signal.**
 
-<img width="1515" height="924" alt="image" src="https://github.com/user-attachments/assets/0a09af85-38a1-4989-abd9-62af6b4fe4c8" />
+<img width="2524" height="1924" alt="image" src="https://github.com/user-attachments/assets/b07558b9-381d-457e-941c-0be0ad97a398" />
+
 
 
 ---
@@ -30,9 +31,9 @@ WebGL/R3F frontend visualizing the **"Trinity"** of neural control.
 
 ---
 
-## 🎯 The Trinity Visualization
+## 🎯 The Visualization
 
-The dashboard renders three distinct cursors to visualize the **Cognitive Manifold** in real-time:
+The dashboard renders two distinct cursors to visualize the **Cognitive Manifold** in real-time:
 
 | Cursor | Color | Description |
 |--------|-------|-------------|
@@ -274,6 +275,7 @@ MIT License
 **Built for the BCI community** 🧠⚡
 
 *"Close the loop. Collapse the triangle. Master the gauntlet."*
+
 
 
 
