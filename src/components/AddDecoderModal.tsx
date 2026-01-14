@@ -7,6 +7,7 @@
  */
 
 import { memo, useState, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useStore } from '../store';
 import { registerCustomDecoder } from '../decoders';
 import type { Decoder } from '../types/decoders';
@@ -98,9 +99,16 @@ export const AddDecoderModal = memo(function AddDecoderModal({ isOpen, onClose }
 
   if (!isOpen) return null;
 
-  return (
-    <div className="p-4 rounded-xl bg-gray-800/50 border border-gray-700/30 animate-fade-in">
-      <div className="flex justify-between items-center mb-4">
+  // Full screen mode for code editor
+  const isFullScreen = sourceType === 'code';
+
+  const modalContent = (
+    <div className={`${
+      isFullScreen 
+        ? 'fixed inset-0 z-50 bg-gray-900 flex flex-col' 
+        : 'p-4 rounded-xl bg-gray-800/50 border border-gray-700/30 animate-fade-in'
+    }`}>
+      <div className={`flex justify-between items-center ${isFullScreen ? 'p-4 border-b border-gray-700/50' : 'mb-4'}`}>
         <h3 className="text-sm font-semibold text-white">Add Custom Decoder</h3>
         <button 
           onClick={onClose}
@@ -110,9 +118,9 @@ export const AddDecoderModal = memo(function AddDecoderModal({ isOpen, onClose }
         </button>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-3">
+      <form onSubmit={handleSubmit} className={`${isFullScreen ? 'flex-1 flex flex-col overflow-hidden' : 'space-y-3'}`}>
         {/* Source type selector */}
-        <div>
+        <div className={isFullScreen ? 'px-4 pt-2' : ''}>
           <label className="block text-xs text-gray-400 mb-1">Model Source *</label>
           <div className="flex gap-2">
             <button
@@ -141,7 +149,7 @@ export const AddDecoderModal = memo(function AddDecoderModal({ isOpen, onClose }
         </div>
 
         {/* Name */}
-        <div>
+        <div className={isFullScreen ? 'px-4' : ''}>
           <label className="block text-xs text-gray-400 mb-1">Name *</label>
           <input
             type="text"
@@ -173,31 +181,60 @@ export const AddDecoderModal = memo(function AddDecoderModal({ isOpen, onClose }
 
         {/* TensorFlow.js Code */}
         {sourceType === 'code' && (
-          <div>
-            <label className="block text-xs text-gray-400 mb-1">TensorFlow.js Code *</label>
-            <textarea
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              placeholder={`// Build model with TensorFlow.js
-const model = tf.sequential();
-model.add(tf.layers.dense({ units: 64, activation: 'relu', inputShape: [142] }));
-model.add(tf.layers.dense({ units: 2 }));
-model.compile({ optimizer: 'adam', loss: 'meanSquaredError' });
+          <div className="flex-1 flex flex-col px-4 min-h-0">
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-xs text-gray-400">TensorFlow.js Code *</label>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-500 font-mono">JavaScript</span>
+                <div className="flex items-center gap-1">
+                  <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                  <span className="text-xs text-gray-400">Ready</span>
+                </div>
+              </div>
+            </div>
+            <div className="flex-1 relative min-h-0">
+              <textarea
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                placeholder={`// Build your TensorFlow.js model
+// The 'tf' global object provides access to all TensorFlow.js functionality
 
-// Return the model
+const model = tf.sequential();
+model.add(tf.layers.dense({ 
+  units: 64, 
+  activation: 'relu', 
+  inputShape: [142] 
+}));
+model.add(tf.layers.dense({ units: 2 }));
+model.compile({ 
+  optimizer: 'adam', 
+  loss: 'meanSquaredError' 
+});
+
+// Must return a compiled TensorFlow.js model
 return model;`}
-              rows={10}
-              className="w-full bg-gray-900/80 text-white px-3 py-2 rounded-lg text-xs border border-gray-600/50 
-                focus:border-loopback focus:outline-none focus:ring-1 focus:ring-loopback/50 resize-none font-mono"
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              Code must return a compiled TensorFlow.js model. 'tf' is available globally.
-            </p>
+                className="absolute inset-0 w-full h-full bg-gray-900 text-white p-4 text-sm 
+                  border border-gray-700/50 focus:border-loopback focus:outline-none 
+                  focus:ring-2 focus:ring-loopback/50 resize-none font-mono leading-relaxed"
+                spellCheck={false}
+                style={{ 
+                  tabSize: 2,
+                  lineHeight: '1.6'
+                }}
+              />
+            </div>
+            <div className="mt-2 p-2 bg-gray-800/50 rounded-lg border border-gray-700/30">
+              <p className="text-xs text-gray-400 leading-relaxed">
+                <strong className="text-loopback">💡 Tip:</strong> Code must return a compiled TensorFlow.js model. 
+                The global <code className="text-loopback/80 bg-gray-900 px-1 rounded">tf</code> object 
+                provides full API access. Use <code className="text-loopback/80 bg-gray-900 px-1 rounded">tf.sequential()</code> or <code className="text-loopback/80 bg-gray-900 px-1 rounded">tf.model()</code> to build models.
+              </p>
+            </div>
           </div>
         )}
 
         {/* Description */}
-        <div>
+        <div className={isFullScreen ? 'px-4' : ''}>
           <label className="block text-xs text-gray-400 mb-1">Description</label>
           <textarea
             value={description}
@@ -211,13 +248,13 @@ return model;`}
 
         {/* Error */}
         {error && (
-          <div className="text-red-400 text-xs bg-red-500/10 px-3 py-2 rounded-lg border border-red-500/30">
+          <div className={`text-red-400 text-xs bg-red-500/10 px-3 py-2 rounded-lg border border-red-500/30 ${isFullScreen ? 'mx-4' : ''}`}>
             {error}
           </div>
         )}
 
         {/* Buttons */}
-        <div className="flex gap-2 pt-2">
+        <div className={`flex gap-2 ${isFullScreen ? 'px-4 pb-4 pt-2 border-t border-gray-700/50 bg-gray-800/50' : 'pt-2'}`}>
           <button
             type="button"
             onClick={onClose}
@@ -235,6 +272,7 @@ return model;`}
       </form>
 
       {/* Help text */}
+      {!isFullScreen && (
       <div className="mt-3 pt-3 border-t border-gray-700/50">
         {sourceType === 'code' ? (
           <>
@@ -263,6 +301,12 @@ return model;`}
           </>
         )}
       </div>
+      )}
     </div>
   );
+
+  // Use portal for full-screen mode to escape container constraints
+  return isFullScreen 
+    ? createPortal(modalContent, document.body)
+    : modalContent;
 });
