@@ -7,6 +7,11 @@ export default defineConfig({
   worker: {
     format: 'es',
   },
+  resolve: {
+    alias: {
+      buffer: 'buffer/',
+    },
+  },
   define: {
     // Fix for CommonJS modules in ESM context
     'global': 'globalThis',
