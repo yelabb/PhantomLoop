@@ -161,27 +161,27 @@ canvas {
 
 /* Dashboard card styling */
 .dashboard-card {
-  @apply bg-gray-900/95 backdrop-blur-xl rounded-2xl border border-gray-700/30 shadow-2xl;
-  @apply transition-all duration-300 ease-out;
-  @apply hover:border-gray-600/50 hover:shadow-purple-500/5;
+  @apply bg-gray-900/95 backdrop-blur-sm border border-gray-700/50;
+  @apply transition-all duration-200 ease-out;
+  @apply hover:border-gray-600/70;
 }
 
 /* Dashboard sidebar */
 .dashboard-sidebar {
-  @apply flex flex-col gap-5 p-5;
-  @apply bg-gray-950/80 backdrop-blur-2xl;
-  @apply border-r border-gray-800/50;
+  @apply flex flex-col gap-4 p-6;
+  @apply bg-gray-950/95 backdrop-blur-sm;
+  @apply border-r border-gray-800/70;
 }
 
 /* Dashboard header */
 .dashboard-header {
-  @apply px-6 py-4 bg-gray-950/90 backdrop-blur-xl;
-  @apply border-b border-gray-800/50;
+  @apply px-6 py-4 bg-gray-950/95 backdrop-blur-sm;
+  @apply border-b border-gray-800/70;
 }
 
 /* Stat card with improved visibility */
 .stat-card {
-  @apply p-5 rounded-xl border backdrop-blur-sm;
+  @apply p-4 border border-gray-700/50 backdrop-blur-sm;
   @apply min-h-[100px] flex flex-col justify-between;
 }
 

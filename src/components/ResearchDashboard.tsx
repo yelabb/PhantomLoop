@@ -30,11 +30,12 @@ const StatusBadge = memo(function StatusBadge({
   };
   
   return (
-    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-900/80 border border-gray-700/50">
+    <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-900/80 border border-gray-700/50">
       <motion.div
-        className={`w-2 h-2 rounded-full ${colors[status]}`}
+        className={`w-2 h-2`}
         animate={{ scale: [1, 1.2, 1] }}
         transition={{ repeat: Infinity, duration: 1.5 }}
+        style={{ backgroundColor: colors[status] }}
       />
       <span className="text-xs font-medium text-gray-300">{label}</span>
     </div>
@@ -78,13 +79,9 @@ const CollapsiblePanel = memo(function CollapsiblePanel({
         <span className="text-sm font-semibold text-gray-300 uppercase tracking-wider">
           {title}
         </span>
-        <motion.span
-          animate={{ rotate: isOpen ? 180 : 0 }}
-          transition={{ duration: 0.2 }}
-          className="text-gray-500 text-sm"
-        >
-          ▼
-        </motion.span>
+        <span className="text-gray-500 text-sm">
+          {isOpen ? '−' : '+'}
+        </span>
       </button>
       
       <AnimatePresence>
@@ -156,14 +153,14 @@ export const ResearchDashboard = memo(function ResearchDashboard() {
       {/* Full Dashboard Layout */}
       <div className="absolute inset-0 flex flex-col bg-gray-950 z-50">
         {/* Top Header Bar */}
-        <header className="dashboard-header flex items-center justify-between shrink-0 pointer-events-auto">
+        <header className="dashboard-header flex items-center justify-between shrink-0">
           <div className="flex items-center gap-4">
             <div className="flex flex-col">
-              <h1 className="text-xl font-bold bg-gradient-to-r from-purple-400 via-blue-400 to-green-400 bg-clip-text text-transparent">
+              <h1 className="text-lg font-bold text-white tracking-tight">
                 PHANTOM LOOP
               </h1>
-              <p className="text-[10px] text-gray-500 tracking-widest uppercase">
-                BCI Decoder Analysis Platform
+              <p className="text-[10px] text-gray-500 tracking-wider uppercase">
+                Neural Analysis Platform
               </p>
             </div>
           </div>
@@ -171,23 +168,23 @@ export const ResearchDashboard = memo(function ResearchDashboard() {
           <div className="flex items-center gap-4">
             <StatusBadge
               status={systemStatus}
-              label={isConnected ? `${totalLatency.toFixed(0)}ms latency` : 'Offline'}
+              label={isConnected ? `${totalLatency.toFixed(0)}ms` : 'Offline'}
             />
             <ConnectionStatus />
           </div>
         </header>
         
         {/* Main Content Area */}
-        <div className="flex flex-1 min-h-0 pointer-events-auto">
+        <div className="flex flex-1 min-h-0">
           {/* Left Sidebar - Controls */}
-          <aside className="dashboard-sidebar w-80 shrink-0 overflow-y-auto scrollbar-hide">
+          <aside className="dashboard-sidebar w-80 shrink-0 overflow-y-auto">
             <CollapsiblePanel title="Decoder Selection" defaultOpen={true}>
               <DecoderSelector />
             </CollapsiblePanel>
           </aside>
           
           {/* Center - Main Visualization */}
-          <main className="flex-1 flex flex-col items-center justify-center p-6 min-w-0 bg-gray-900/30 gap-6 overflow-y-auto">
+          <main className="flex-1 flex flex-col items-center justify-center p-6 min-w-0 bg-gray-900/50 gap-6 overflow-y-auto">
             <div className="dashboard-card p-6 flex flex-col items-center gap-6">
               <CenterOutArena />
               <div className="w-full flex justify-center">
@@ -197,9 +194,9 @@ export const ResearchDashboard = memo(function ResearchDashboard() {
           </main>
           
           {/* Right Sidebar - Metrics */}
-          <aside className="dashboard-sidebar w-96 shrink-0 overflow-y-auto scrollbar-hide">
+          <aside className="dashboard-sidebar w-96 shrink-0 overflow-y-auto">
             {/* Accuracy History Card */}
-            <div className="dashboard-card p-5">
+            <div className="dashboard-card p-4">
               <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">
                 Accuracy History
               </h3>
@@ -222,7 +219,7 @@ export const ResearchDashboard = memo(function ResearchDashboard() {
             </div>
             
             {/* Neuron Activity Grid Card */}
-            <div className="dashboard-card p-5">
+            <div className="dashboard-card p-4">
               <NeuronActivityGrid
                 columns={12}
                 maxNeurons={96}
@@ -231,7 +228,7 @@ export const ResearchDashboard = memo(function ResearchDashboard() {
             </div>
             
             {/* Quick Stats Card */}
-            <div className="dashboard-card p-5">
+            <div className="dashboard-card p-4">
               <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">
                 Live Metrics
               </h3>
@@ -241,19 +238,19 @@ export const ResearchDashboard = memo(function ResearchDashboard() {
         </div>
         
         {/* Bottom Status Bar */}
-        <footer className="px-6 py-3 bg-gray-950/90 border-t border-gray-800/50 flex items-center justify-between shrink-0 relative">
+        <footer className="px-6 py-3 bg-gray-950 border-t border-gray-800/70 flex items-center justify-between shrink-0">
           {/* Legend */}
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-green-500 shadow-lg shadow-green-500/50" />
+              <div className="w-3 h-3 bg-green-500" />
               <span className="text-xs text-gray-400">Ground Truth</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-blue-500 shadow-lg shadow-blue-500/50" />
+              <div className="w-3 h-3 bg-blue-500" />
               <span className="text-xs text-gray-400">Decoded</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full border border-purple-500" />
+              <div className="w-3 h-3 border border-purple-500" />
               <span className="text-xs text-gray-400">Target</span>
             </div>
           </div>

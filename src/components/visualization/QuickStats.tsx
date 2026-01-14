@@ -81,8 +81,8 @@ const DecoderBadge = memo(function DecoderBadge() {
   
   if (!activeDecoder) {
     return (
-      <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-gray-800/50 border border-gray-700/50">
-        <div className="w-2.5 h-2.5 rounded-full bg-gray-500" />
+      <div className="flex items-center gap-3 px-4 py-3 bg-gray-800/50 border border-gray-700/50">
+        <div className="w-2.5 h-2.5 bg-gray-500" />
         <span className="text-sm font-medium text-gray-400">No decoder active</span>
       </div>
     );
@@ -92,14 +92,14 @@ const DecoderBadge = memo(function DecoderBadge() {
   
   return (
     <div 
-      className="flex items-center gap-3 px-4 py-3 rounded-xl border"
+      className="flex items-center gap-3 px-4 py-3 border"
       style={{
         backgroundColor: isHealthy ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
         borderColor: isHealthy ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)',
       }}
     >
       <motion.div 
-        className="w-2.5 h-2.5 rounded-full"
+        className="w-2.5 h-2.5"
         style={{ backgroundColor: isHealthy ? '#22c55e' : '#ef4444' }}
         animate={{ scale: [1, 1.2, 1] }}
         transition={{ repeat: Infinity, duration: 1 }}
@@ -203,21 +203,21 @@ export const QuickStats = memo(function QuickStats() {
       
       {/* Secondary stats */}
       <div className="grid grid-cols-3 gap-3">
-        <div className="flex flex-col items-center p-3 bg-gray-800/40 rounded-xl border border-gray-700/30">
+        <div className="flex flex-col items-center p-3 bg-gray-800/40 border border-gray-700/30">
           <span className="text-xs text-gray-500 uppercase tracking-wider mb-1">FPS</span>
           <span className={`text-lg font-mono font-bold ${fps >= 55 ? 'text-green-400' : 'text-yellow-400'}`}>
             {fps.toFixed(0)}
           </span>
         </div>
         
-        <div className="flex flex-col items-center p-3 bg-gray-800/40 rounded-xl border border-gray-700/30">
+        <div className="flex flex-col items-center p-3 bg-gray-800/40 border border-gray-700/30">
           <span className="text-xs text-gray-500 uppercase tracking-wider mb-1">Packets</span>
           <span className="text-lg font-mono font-bold text-gray-300">
             {packetsReceived}
           </span>
         </div>
         
-        <div className="flex flex-col items-center p-3 bg-gray-800/40 rounded-xl border border-gray-700/30">
+        <div className="flex flex-col items-center p-3 bg-gray-800/40 border border-gray-700/30">
           <span className="text-xs text-gray-500 uppercase tracking-wider mb-1">Loss</span>
           <span className={`text-lg font-mono font-bold ${lossRate < 1 ? 'text-green-400' : 'text-red-400'}`}>
             {lossRate.toFixed(1)}%

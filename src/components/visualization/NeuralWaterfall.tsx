@@ -71,7 +71,7 @@ export const NeuralWaterfall = memo(function NeuralWaterfall({
   }, [currentPacket, width, height, maxNeurons]);
 
   return (
-    <div className="relative rounded-xl overflow-hidden border border-gray-700/50 bg-gray-950 shadow-inner">
+    <div className="relative overflow-hidden border border-gray-700/50 bg-gray-950">
         <canvas
             ref={canvasRef}
             width={width}
@@ -79,7 +79,7 @@ export const NeuralWaterfall = memo(function NeuralWaterfall({
             className="w-full h-full block"
             style={{ imageRendering: 'pixelated' }}
         />
-        <div className="absolute top-2 left-2 px-2 py-1 bg-gray-900/80 rounded border border-gray-700/50 pointer-events-none">
+        <div className="absolute top-2 left-2 px-2 py-1 bg-gray-900/80 border border-gray-700/50">
             <span className="text-[10px] font-mono text-gray-400">NEURAL_WATERFALL // T-{scrollOffset.current}</span>
         </div>
     </div>

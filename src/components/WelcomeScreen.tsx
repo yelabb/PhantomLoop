@@ -99,9 +99,9 @@ export const WelcomeScreen = memo(function WelcomeScreen() {
         </div>
 
         {/* Session card */}
-        <div className="w-full glass-panel p-6 rounded-2xl animate-slide-up delay-300">
+        <div className="w-full bg-gray-900/90 backdrop-blur-sm p-6 border border-gray-700/50">
           <div className="flex items-center gap-3 mb-5">
-            <div className="w-3 h-3 rounded-full bg-gradient-to-r from-phantom to-loopback animate-pulse" />
+            <div className="w-3 h-3 bg-gradient-to-r from-phantom to-loopback" />
             <h2 className="text-lg font-semibold text-white">Start a Session</h2>
           </div>
 
@@ -116,9 +116,9 @@ export const WelcomeScreen = memo(function WelcomeScreen() {
                   onChange={(e) => setSessionInput(e.target.value.toUpperCase())}
                   onKeyPress={handleKeyPress}
                   placeholder="Enter session code..."
-                  className="flex-1 bg-gray-800/80 text-white px-4 py-3 rounded-xl text-sm 
+                  className="flex-1 bg-gray-800/80 text-white px-4 py-3 text-sm 
                     border border-gray-600/50 focus:border-phantom focus:outline-none 
-                    focus:ring-2 focus:ring-phantom/30 placeholder:text-gray-500 
+                    focus:ring-1 focus:ring-phantom/30 placeholder:text-gray-500 
                     transition-all duration-200 font-mono tracking-wider"
                   disabled={isConnecting}
                   maxLength={8}
@@ -127,10 +127,10 @@ export const WelcomeScreen = memo(function WelcomeScreen() {
                   onClick={handleConnect}
                   disabled={!sessionInput.trim() || isConnecting}
                   className="px-6 py-3 bg-gradient-to-r from-phantom to-yellow-500 
-                    text-black rounded-xl text-sm font-bold
+                    text-black text-sm font-bold
                     hover:from-yellow-400 hover:to-yellow-500 
                     disabled:opacity-50 disabled:cursor-not-allowed 
-                    transition-all duration-200 shadow-lg shadow-phantom/30
+                    transition-all duration-200
                     flex items-center gap-2 min-w-[100px] justify-center"
                 >
                   {isConnecting ? (
@@ -156,7 +156,7 @@ export const WelcomeScreen = memo(function WelcomeScreen() {
             <button
               onClick={handleCreateSession}
               disabled={isCreating}
-              className="w-full py-4 bg-gray-800/80 text-white rounded-xl text-sm font-semibold
+              className="w-full py-4 bg-gray-800/80 text-white text-sm font-semibold
                 hover:bg-gray-700/80 disabled:opacity-50 disabled:cursor-not-allowed
                 transition-all duration-200 border border-gray-600/50 hover:border-phantom/50
                 flex items-center justify-center gap-3 group"
@@ -177,7 +177,7 @@ export const WelcomeScreen = memo(function WelcomeScreen() {
 
           {/* Error message */}
           {(error || connectionError) && (
-            <div className="mt-4 p-3 rounded-lg bg-red-500/20 border border-red-500/50">
+            <div className="mt-4 p-3 bg-red-500/20 border border-red-500/50">
               <p className="text-red-400 text-sm text-center">
                 {error || connectionError}
               </p>
@@ -188,15 +188,15 @@ export const WelcomeScreen = memo(function WelcomeScreen() {
         {/* Features hint */}
         <div className="flex flex-wrap justify-center gap-6 text-center animate-fade-in delay-500">
           <div className="flex items-center gap-2 text-gray-500 text-sm">
-            <div className="w-2 h-2 rounded-full bg-phantom" />
+            <div className="w-2 h-2 rounded-sm bg-phantom" />
             <span>3D Visualization</span>
           </div>
           <div className="flex items-center gap-2 text-gray-500 text-sm">
-            <div className="w-2 h-2 rounded-full bg-loopback" />
+            <div className="w-2 h-2 rounded-sm bg-loopback" />
             <span>Neural Decoders</span>
           </div>
           <div className="flex items-center gap-2 text-gray-500 text-sm">
-            <div className="w-2 h-2 rounded-full bg-biolink" />
+            <div className="w-2 h-2 rounded-sm bg-biolink" />
             <span>Real-time Metrics</span>
           </div>
         </div>

@@ -10,17 +10,17 @@ export const ConnectionStatus = memo(function ConnectionStatus() {
   const disconnectWebSocket = useStore((state) => state.disconnectWebSocket);
 
   return (
-    <div className={`glass-panel px-4 py-2.5 rounded-xl transition-all duration-300 ${
-      isConnected ? 'border-green-500/30' : connectionError ? 'border-red-500/30' : ''
+    <div className={`bg-gray-900/90 backdrop-blur-sm px-4 py-2.5 border ${
+      isConnected ? 'border-green-500/30' : connectionError ? 'border-red-500/30' : 'border-gray-700/50'
     }`}>
       <div className="flex items-center gap-3">
         {/* Status Indicator */}
         <div className="relative">
-          <div className={`w-2.5 h-2.5 rounded-full transition-colors duration-300 ${
+          <div className={`w-2.5 h-2.5 transition-colors duration-300 ${
             isConnected ? 'bg-green-500' : connectionError ? 'bg-red-500' : 'bg-gray-500'
           }`}>
             {isConnected && (
-              <div className="absolute inset-0 bg-green-500 rounded-full animate-ping opacity-50" />
+              <div className="absolute inset-0 bg-green-500 animate-ping opacity-50" />
             )}
           </div>
         </div>
@@ -33,7 +33,7 @@ export const ConnectionStatus = memo(function ConnectionStatus() {
             {isConnected ? 'Live' : connectionError ? 'Error' : 'Offline'}
           </span>
           {sessionCode && isConnected && (
-            <span className="text-xs text-gray-500 font-mono bg-gray-800/50 px-2 py-0.5 rounded">
+            <span className="text-xs text-gray-500 font-mono bg-gray-800/50 px-2 py-0.5 border border-gray-600/50">
               {sessionCode}
             </span>
           )}
@@ -44,7 +44,7 @@ export const ConnectionStatus = memo(function ConnectionStatus() {
           <button
             onClick={disconnectWebSocket}
             className="ml-2 px-3 py-1 text-xs font-medium text-red-400 hover:text-red-300 
-              hover:bg-red-500/10 rounded-lg transition-all duration-200 border border-red-500/30 hover:border-red-500/50"
+              hover:bg-red-500/10 transition-all duration-200 border border-red-500/30 hover:border-red-500/50"
           >
             Disconnect
           </button>

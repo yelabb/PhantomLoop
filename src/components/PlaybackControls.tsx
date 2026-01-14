@@ -40,14 +40,14 @@ export const PlaybackControls = memo(function PlaybackControls() {
   if (!isConnected) return null;
 
   return (
-    <div className="flex items-center gap-2 bg-gray-800/80 backdrop-blur-md rounded-full px-4 py-2 border border-gray-700/50 shadow-xl">
+    <div className="flex items-center gap-2 bg-gray-800/80 backdrop-blur-sm px-4 py-2 border border-gray-700/50">
       <button
         onClick={() => handleControl('resume')}
         disabled={isPlaying}
-        className={`p-2 rounded-full transition-colors ${
+        className={`p-2 transition-colors ${
             isPlaying 
                 ? 'text-gray-600 cursor-not-allowed' 
-                : 'text-white bg-green-600 hover:bg-green-500 shadow-lg shadow-green-500/20'
+                : 'text-white bg-green-600 hover:bg-green-500'
         }`}
         title="Resume Stream"
       >
@@ -57,10 +57,10 @@ export const PlaybackControls = memo(function PlaybackControls() {
       <button
         onClick={() => handleControl('pause')}
         disabled={!isPlaying}
-        className={`p-2 rounded-full transition-colors ${
+        className={`p-2 transition-colors ${
             !isPlaying 
                 ? 'text-gray-600 cursor-not-allowed' 
-                : 'text-white bg-yellow-600 hover:bg-yellow-500 shadow-lg shadow-yellow-500/20'
+                : 'text-white bg-yellow-600 hover:bg-yellow-500'
         }`}
         title="Pause Stream"
       >
@@ -71,7 +71,7 @@ export const PlaybackControls = memo(function PlaybackControls() {
 
        <button
         onClick={() => handleControl('stop')}
-        className="p-2 rounded-full text-red-400 hover:bg-red-500/20 transition-colors"
+        className="p-2 text-red-400 hover:bg-red-500/10 transition-colors"
         title="Stop/Reset"
       >
         <StopIcon />
