@@ -2,13 +2,11 @@
 
 import type { DecoderInput, DecoderOutput, Decoder } from '../types/decoders';
 import { PERFORMANCE_THRESHOLDS } from '../utils/constants';
-import {
-  runLinearDecoder,
-  runMLPDecoder,
-  runLSTMDecoder,
-  runAttentionDecoder,
-  runKalmanNeuralDecoder,
-} from './tfjsInference';
+import { tfWorker, getWorkerModelType } from './tfWorkerManager';
+
+// Spike history for temporal models
+const spikeHistory: number[][] = [];
+const MAX_HISTORY = 10;
 
 // Cache compiled decoder functions to avoid recompiling on every call
 const compiledDecoders = new Map<string, (input: DecoderInput) => { x: number; y: number; vx?: number; vy?: number; confidence?: number }>();
@@ -82,43 +80,80 @@ export function executeJSDecoder(
 }
 
 /**
- * Execute a TensorFlow.js decoder (asynchronous)
+ * Execute a TensorFlow.js decoder using Web Worker (asynchronous, non-blocking)
  */
 export async function executeTFJSDecoder(
   decoder: Decoder,
   input: DecoderInput
 ): Promise<DecoderOutput> {
+  const startTime = performance.now();
+  
   try {
-    switch (decoder.tfjsModelType) {
-      case 'linear':
-        return await runLinearDecoder(input);
-      case 'mlp':
-        return await runMLPDecoder(input);
-      case 'lstm':
-        return await runLSTMDecoder(input);
-      case 'attention':
-        return await runAttentionDecoder(input);
-      case 'kalman-neural':
-        return await runKalmanNeuralDecoder(input);
-      default:
-        console.warn(`[Decoder] Unknown TFJS model type: ${decoder.tfjsModelType}`);
-        return {
-          x: input.kinematics.x,
-          y: input.kinematics.y,
-          vx: input.kinematics.vx,
-          vy: input.kinematics.vy,
-          latency: 0,
-        };
+    const modelType = decoder.tfjsModelType === 'kalman-neural' ? 'mlp' : decoder.tfjsModelType;
+    const workerType = getWorkerModelType(modelType);
+    
+    if (!workerType) {
+      console.warn(`[Decoder] Unknown TFJS model type: ${decoder.tfjsModelType}`);
+      return {
+        x: input.kinematics.x,
+        y: input.kinematics.y,
+        vx: input.kinematics.vx,
+        vy: input.kinematics.vy,
+        latency: 0,
+      };
     }
+
+    // Prepare input based on model type
+    let workerInput: number[] | number[][];
+    
+    if (workerType === 'lstm' || workerType === 'attention') {
+      // Temporal models need spike history
+      spikeHistory.push([...input.spikes]);
+      if (spikeHistory.length > MAX_HISTORY) {
+        spikeHistory.shift();
+      }
+      
+      // Pad history if needed
+      while (spikeHistory.length < MAX_HISTORY) {
+        spikeHistory.unshift(new Array(142).fill(0));
+      }
+      
+      workerInput = spikeHistory.map(s => [...s]);
+    } else {
+      // Non-temporal models just need current spikes
+      workerInput = [...input.spikes];
+    }
+
+    // Run inference in worker
+    const output = await tfWorker.infer(workerType, workerInput);
+    const latency = performance.now() - startTime;
+
+    // Scale output to velocity
+    const VELOCITY_SCALE = 50;
+    const vx = output[0] * VELOCITY_SCALE;
+    const vy = output[1] * VELOCITY_SCALE;
+
+    // Calculate new position
+    const DT = 0.025;
+    const x = input.kinematics.x + vx * DT;
+    const y = input.kinematics.y + vy * DT;
+
+    return {
+      x: Math.max(-100, Math.min(100, x)),
+      y: Math.max(-100, Math.min(100, y)),
+      vx,
+      vy,
+      latency,
+    };
   } catch (error) {
-    console.error(`[Decoder] TFJS execution error in ${decoder.name}:`, error);
+    console.error(`[Decoder] TFJS Worker execution error in ${decoder.name}:`, error);
     
     return {
       x: input.kinematics.x,
       y: input.kinematics.y,
       vx: input.kinematics.vx,
       vy: input.kinematics.vy,
-      latency: 0,
+      latency: performance.now() - startTime,
     };
   }
 }

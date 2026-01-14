@@ -1,11 +1,10 @@
 // Decoder Selector Component - Memoized with loading states
 
 import { memo, useEffect, useCallback, useState } from 'react';
-import { flushSync } from 'react-dom';
 import { useStore } from '../store';
-import { allDecoders, getBackendInfo, getModel } from '../decoders';
+import { allDecoders, getBackendInfo, initModel } from '../decoders';
 import { Spinner } from './LoadingStates';
-import type { Decoder } from '../types/decoders';
+import type { Decoder, TFJSModelType } from '../types/decoders';
 
 // Separate component for latency display to prevent full re-renders
 const LatencyDisplay = memo(function LatencyDisplay() {
@@ -63,28 +62,15 @@ export const DecoderSelector = memo(function DecoderSelector() {
 
     // For TFJS decoders, preload the model with loading state
     if (decoder.type === 'tfjs' && decoder.tfjsModelType) {
-      // Use flushSync to FORCE React to render the loading state immediately
-      // before the blocking TensorFlow.js model compilation happens
-      flushSync(() => {
-        setIsLoading(true);
-        setLoadingName(decoder.name);
-      });
-      
-      // Also update global loading state
+      // Set loading state BEFORE async work
+      setIsLoading(true);
+      setLoadingName(decoder.name);
       setDecoderLoading(true, decoder.name);
       
-      // Wait for paint to complete
-      await new Promise(resolve => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => resolve(undefined));
-        });
-      });
-      
       try {
-        // Preload the model (this compiles it - blocks the main thread)
-        // kalman-neural uses MLP internally, so we map it
-        const modelType = decoder.tfjsModelType === 'kalman-neural' ? 'mlp' : decoder.tfjsModelType;
-        await getModel(modelType as 'linear' | 'mlp' | 'lstm' | 'attention');
+        // Use Web Worker to create model - this runs in a separate thread
+        // so the main thread stays responsive and the loading UI shows
+        await initModel(decoder.tfjsModelType as TFJSModelType);
         
         // Small delay for visual feedback after loading completes
         await new Promise(resolve => setTimeout(resolve, 200));
