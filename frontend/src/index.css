@@ -101,12 +101,32 @@ canvas {
   animation: fade-in 0.3s ease-out forwards;
 }
 
+.animate-fade-in.delay-200 {
+  animation-delay: 200ms;
+  opacity: 0;
+}
+
+.animate-fade-in.delay-500 {
+  animation-delay: 500ms;
+  opacity: 0;
+}
+
+.animate-fade-in.delay-700 {
+  animation-delay: 700ms;
+  opacity: 0;
+}
+
 .animate-fade-out {
   animation: fade-out 0.3s ease-out forwards;
 }
 
 .animate-slide-up {
   animation: slide-up 0.4s ease-out forwards;
+}
+
+.animate-slide-up.delay-300 {
+  animation-delay: 300ms;
+  opacity: 0;
 }
 
 .animate-slide-down {

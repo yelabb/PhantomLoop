@@ -2,7 +2,7 @@
 
 import { memo, useMemo } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls, Stats } from '@react-three/drei';
+import { OrbitControls } from '@react-three/drei';
 import { PhantomCursor } from './PhantomCursor';
 import { BioLinkCursor } from './BioLinkCursor';
 import { LoopBackCursor } from './LoopBackCursor';
@@ -112,7 +112,6 @@ export function Arena() {
       {/* Camera Controls */}
       <CameraController />
       <OrbitControls makeDefault />
-      <Stats />
 
       {/* Memoized scene content */}
       <SceneContent
