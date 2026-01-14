@@ -1,7 +1,7 @@
 // Center-Out Arena - 2D Top-down visualization optimized for researchers
 // Shows targets, cursor trajectories, and real-time error visualization
 
-import { memo, useMemo } from 'react';
+import { memo, useMemo, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useStore } from '../../store';
 import { COLORS } from '../../utils/constants';
@@ -48,6 +48,128 @@ function errorToColor(error: number): string {
   if (error < 0.4) return '#f97316'; // Orange
   return '#ef4444'; // Red
 }
+
+// Particle system for visualizing neural spikes
+interface Particle {
+  id: number;
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  life: number;
+  maxLife: number;
+  intensity: number;
+  channel: number;
+}
+
+// Neural spike background visualization
+const NeuralBackground = memo(function NeuralBackground({ 
+  spikes 
+}: { 
+  spikes: number[] | null 
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const particlesRef = useRef<Particle[]>([]);
+  const frameIdRef = useRef<number | null>(null);
+  const particleIdRef = useRef(0);
+  
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    
+    // Generate particles based on spike activity
+    if (spikes && spikes.length > 0) {
+      const totalSpikes = spikes.reduce((sum, s) => sum + s, 0);
+      const avgSpikes = totalSpikes / spikes.length;
+      
+      // Create particles based on spike activity (throttled)
+      if (avgSpikes > 0 && particlesRef.current.length < 150) {
+        // Sample a subset of channels with highest activity
+        const activeChannels = spikes
+          .map((count, idx) => ({ count, idx }))
+          .filter(c => c.count > 0)
+          .sort((a, b) => b.count - a.count)
+          .slice(0, 10); // Top 10 active channels
+        
+        activeChannels.forEach(({ count, idx }) => {
+          // Spawn 1-2 particles per active channel
+          const particleCount = Math.min(Math.ceil(count / 3), 2);
+          for (let i = 0; i < particleCount; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const radius = TARGET_RADIUS + Math.random() * 40;
+            const x = CENTER + Math.cos(angle) * radius;
+            const y = CENTER + Math.sin(angle) * radius;
+            
+            particlesRef.current.push({
+              id: particleIdRef.current++,
+              x,
+              y,
+              vx: (Math.random() - 0.5) * 0.5,
+              vy: (Math.random() - 0.5) * 0.5,
+              life: 0,
+              maxLife: 60 + Math.random() * 40,
+              intensity: Math.min(count / 8, 1),
+              channel: idx,
+            });
+          }
+        });
+      }
+    }
+    
+    // Animation loop
+    const animate = () => {
+      ctx.clearRect(0, 0, ARENA_SIZE, ARENA_SIZE);
+      
+      // Update and render particles
+      particlesRef.current = particlesRef.current.filter(p => {
+        p.life++;
+        p.x += p.vx;
+        p.y += p.vy;
+        
+        // Fade out
+        const alpha = (1 - p.life / p.maxLife) * p.intensity * 0.7;
+        
+        if (alpha <= 0) return false;
+        
+        // Render particle
+        const gradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, 8);
+        gradient.addColorStop(0, `rgba(139, 92, 246, ${alpha})`);
+        gradient.addColorStop(0.5, `rgba(99, 102, 241, ${alpha * 0.5})`);
+        gradient.addColorStop(1, `rgba(59, 130, 246, 0)`);
+        
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 6 + p.intensity * 4, 0, Math.PI * 2);
+        ctx.fill();
+        
+        return true;
+      });
+      
+      frameIdRef.current = requestAnimationFrame(animate);
+    };
+    
+    animate();
+    
+    return () => {
+      if (frameIdRef.current) {
+        cancelAnimationFrame(frameIdRef.current);
+      }
+    };
+  }, [spikes]);
+  
+  return (
+    <canvas
+      ref={canvasRef}
+      width={ARENA_SIZE}
+      height={ARENA_SIZE}
+      className="absolute inset-0 pointer-events-none"
+      style={{ zIndex: 1 }}
+    />
+  );
+});
 
 // Single target component
 const Target = memo(function Target({ 
@@ -212,6 +334,11 @@ export const CenterOutArena = memo(function CenterOutArena() {
   const currentPacket = useStore((state) => state.currentPacket);
   const decoderOutput = useStore((state) => state.decoderOutput);
   
+  // Extract spike data
+  const spikes = useMemo(() => {
+    return currentPacket?.data?.spikes?.spike_counts || null;
+  }, [currentPacket]);
+  
   // Active target (based on intention)
   const activeTarget = useMemo(() => {
     if (!currentPacket?.data?.intention) return null;
@@ -253,6 +380,13 @@ export const CenterOutArena = memo(function CenterOutArena() {
     return Math.min(d / (ARENA_SIZE / 2), 1);
   }, [groundTruthPos, decodedPos]);
   
+  // Calculate average spike rate
+  const spikeRate = useMemo(() => {
+    if (!spikes || spikes.length === 0) return 0;
+    const total = spikes.reduce((sum, s) => sum + s, 0);
+    return total / spikes.length;
+  }, [spikes]);
+  
   return (
     <div 
       className="relative rounded-2xl overflow-hidden"
@@ -263,6 +397,9 @@ export const CenterOutArena = memo(function CenterOutArena() {
         boxShadow: 'inset 0 0 60px rgba(0,0,0,0.5), 0 0 40px rgba(0,0,0,0.3)',
       }}
     >
+      {/* Neural spike particle background */}
+      <NeuralBackground spikes={spikes} />
+      
       {/* Grid overlay */}
       <svg className="absolute inset-0 pointer-events-none opacity-20">
         <defs>
@@ -329,7 +466,8 @@ export const CenterOutArena = memo(function CenterOutArena() {
       />
       
       {/* Error magnitude display */}
-      <div className="absolute bottom-3 left-3 right-3">
+      <div className="absolute bottom-3 left-3 right-3 space-y-1.5">
+        {/* Error bar */}
         <div className="flex items-center gap-2">
           <span className="text-[10px] text-gray-500 uppercase tracking-wider">Error</span>
           <div className="flex-1 h-2 bg-gray-800 rounded-full overflow-hidden">
@@ -342,6 +480,21 @@ export const CenterOutArena = memo(function CenterOutArena() {
           </div>
           <span className="text-[10px] font-mono font-bold" style={{ color: errorToColor(error) }}>
             {(error * 100).toFixed(1)}%
+          </span>
+        </div>
+        
+        {/* Neural activity indicator */}
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] text-gray-500 uppercase tracking-wider">Neural</span>
+          <div className="flex-1 h-1.5 bg-gray-800 rounded-full overflow-hidden">
+            <motion.div
+              className="h-full rounded-full bg-gradient-to-r from-purple-500 via-indigo-500 to-blue-500"
+              animate={{ width: `${Math.min(spikeRate * 10, 100)}%` }}
+              transition={{ duration: 0.1 }}
+            />
+          </div>
+          <span className="text-[9px] font-mono text-purple-400">
+            {spikeRate.toFixed(1)} Hz
           </span>
         </div>
       </div>
