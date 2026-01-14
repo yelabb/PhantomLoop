@@ -1,8 +1,47 @@
-# PhantomLoop Frontend
+<img width="300" alt="logo" src="https://github.com/user-attachments/assets/87525c02-0301-4421-850f-06f96584b9df" />
 
-**The Neural Gauntlet Arena - WebGL BCI Decoder Visualization**
 
-Real-time 3D visualization of brain-computer interface decoders using React Three Fiber.
+# PHANTOM LOOP
+
+**The Neural Gauntlet: Closed-Loop Validation Infrastructure**
+
+[![PhantomLink Core](https://img.shields.io/badge/Powered_by-PhantomLink_Core-009688.svg)](https://github.com/yelabb/PhantomLink)
+[![Live Demo](https://img.shields.io/badge/🚀_Live_Demo-phantomlink.fly.dev-blue.svg)](https://phantomlink.fly.dev)
+[![WebGL](https://img.shields.io/badge/WebGL-R3F-black.svg)](https://docs.pmnd.rs/react-three-fiber)
+
+> Phantom Loop is not just a visualizer. It is a **hostile environment** for BCI decoders.
+
+It replays high-fidelity neural recordings (MC_Maze dataset) to simulate a live cortex, injecting network latency, signal drift, and noise. Your goal: **connect your decoder, close the loop, and maintain synchronization with the intention signal.**
+
+<img width="600"  alt="screenshot" src="https://github.com/user-attachments/assets/adbde82e-53e0-4b61-b572-c149f4ff8a01" />
+
+---
+
+## 🏗 Architecture
+
+Phantom Loop consists of two decoupled components:
+
+### 1. PhantomLink Core (The Engine)
+Python/FastAPI backend handling 40Hz streaming, session isolation, and drift simulation.
+
+### 2. The Arena (The Dashboard)
+WebGL/R3F frontend visualizing the **"Trinity"** of neural control.
+
+---
+
+## 🎯 The Trinity Visualization
+
+The dashboard renders three distinct cursors to visualize the **Cognitive Manifold** in real-time:
+
+| Cursor | Color | Description |
+|--------|-------|-------------|
+| **🟡 The Phantom (Intention)** | Yellow | The target state. The pure intent extracted from the dataset. |
+| **🟢 The Bio-Link (Ground Truth)** | Green | The actual biological arm movement recorded during the session. The **Gold Standard**. |
+| **🔵 The Loop-Back (Decoder)** | Blue | Your algorithm's prediction, streamed back to the server. |
+
+**The Goal:** Collapse the triangle. **Minimize the area between Phantom, Bio, and Loop.**
+
+---
 
 ## 🚀 Quick Start
 
@@ -234,3 +273,5 @@ MIT License
 **Built for the BCI community** 🧠⚡
 
 *"Close the loop. Collapse the triangle. Master the gauntlet."*
+
+
