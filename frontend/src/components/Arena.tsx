@@ -100,9 +100,11 @@ export function Arena() {
         powerPreference: 'high-performance',
         stencil: false,
         depth: true,
+        alpha: false, // Opaque background for better performance
       }}
-      dpr={[1, 1.5]} // Limit DPR for performance
-      frameloop="always" // Need continuous for smooth cursor animations
+      dpr={[1, 1.25]} // Reduced DPR for better performance
+      frameloop="always" // Keep always for smooth cursor animations
+      performance={{ min: 0.5 }} // Allow performance degradation
     >
       {/* Lighting */}
       <ambientLight intensity={0.5} />

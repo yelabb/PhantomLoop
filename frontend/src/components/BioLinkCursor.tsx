@@ -16,7 +16,6 @@ export const BioLinkCursor = memo(function BioLinkCursor({ x, y }: BioLinkCursor
       y={y} 
       color={COLORS.BIOLINK}
       size={VISUALIZATION.BIOLINK_SIZE}
-      emissiveIntensity={0.6}
     />
   );
 });

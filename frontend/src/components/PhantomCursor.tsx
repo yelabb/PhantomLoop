@@ -16,7 +16,6 @@ export const PhantomCursor = memo(function PhantomCursor({ x, y }: PhantomCursor
       y={y} 
       color={COLORS.PHANTOM}
       size={VISUALIZATION.PHANTOM_SIZE}
-      emissiveIntensity={0.8}
     />
   );
 });

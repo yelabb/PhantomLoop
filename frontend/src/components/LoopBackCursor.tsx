@@ -16,7 +16,6 @@ export const LoopBackCursor = memo(function LoopBackCursor({ x, y }: LoopBackCur
       y={y} 
       color={COLORS.LOOPBACK}
       size={VISUALIZATION.LOOPBACK_SIZE}
-      emissiveIntensity={0.7}
     />
   );
 });

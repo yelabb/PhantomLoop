@@ -2,7 +2,6 @@
 // Shows targets, cursor trajectories, and real-time error visualization
 
 import { memo, useMemo, useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
 import { useStore } from '../../store';
 import { COLORS } from '../../utils/constants';
 
@@ -72,31 +71,48 @@ const NeuralBackground = memo(function NeuralBackground({
   const particlesRef = useRef<Particle[]>([]);
   const frameIdRef = useRef<number | null>(null);
   const particleIdRef = useRef(0);
+  const lastSpikeProcessRef = useRef<number>(0);
   
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { alpha: true, desynchronized: true });
     if (!ctx) return;
     
-    // Generate particles based on spike activity
-    if (spikes && spikes.length > 0) {
+    // Enable hardware acceleration hints
+    ctx.imageSmoothingEnabled = false;
+    
+    // Generate particles based on spike activity (throttled to every 50ms)
+    const processSpikes = () => {
+      const now = performance.now();
+      if (now - lastSpikeProcessRef.current < 50) return;
+      lastSpikeProcessRef.current = now;
+      
+      if (!spikes || spikes.length === 0) return;
+      
       const totalSpikes = spikes.reduce((sum, s) => sum + s, 0);
       const avgSpikes = totalSpikes / spikes.length;
       
-      // Create particles based on spike activity (more particles for visibility)
-      if (avgSpikes > 0 && particlesRef.current.length < 250) {
-        // Sample a subset of channels with highest activity
+      // Normalize spike counts to intensity (0-1 range)
+      const maxSpikes = Math.max(...spikes, 1);
+      
+      // Create particles based on spike activity (reduced particle count for performance)
+      if (avgSpikes > 0 && particlesRef.current.length < 150) {
+        // Sample a subset of channels with intensity above 0.15 threshold
         const activeChannels = spikes
-          .map((count, idx) => ({ count, idx }))
-          .filter(c => c.count > 0)
+          .map((count, idx) => ({ 
+            count, 
+            idx,
+            intensity: count / maxSpikes 
+          }))
+          .filter(c => c.intensity > 0.15) // Only neurons firing above 0.15 intensity
           .sort((a, b) => b.count - a.count)
           .slice(0, 15); // Top 15 active channels
         
-        activeChannels.forEach(({ count, idx }) => {
-          // Spawn more particles per active channel for better visibility
-          const particleCount = Math.min(Math.ceil(count / 2), 3);
+        activeChannels.forEach(({ count, idx, intensity }) => {
+          // Spawn fewer particles per channel for performance
+          const particleCount = Math.min(Math.ceil(count / 3), 2);
           for (let i = 0; i < particleCount; i++) {
             const angle = Math.random() * Math.PI * 2;
             const radius = TARGET_RADIUS + Math.random() * 40;
@@ -111,56 +127,58 @@ const NeuralBackground = memo(function NeuralBackground({
               vy: (Math.random() - 0.5) * 0.5,
               life: 0,
               maxLife: 70 + Math.random() * 50,
-              intensity: Math.min(count / 5, 1.2),
+              intensity: Math.min(intensity * 1.2, 1.2), // Use normalized intensity
               channel: idx,
             });
           }
         });
       }
-    }
+    };
     
-    // Animation loop
+    // Animation loop with optimizations
     const animate = () => {
+      processSpikes();
       ctx.clearRect(0, 0, ARENA_SIZE, ARENA_SIZE);
       
-      // Update and render particles
-      particlesRef.current = particlesRef.current.filter(p => {
+      // Batch particle updates and rendering
+      const aliveparticles: Particle[] = [];
+      
+      // Update all particles first
+      for (let i = 0; i < particlesRef.current.length; i++) {
+        const p = particlesRef.current[i];
         p.life++;
         p.x += p.vx;
         p.y += p.vy;
         
-        // Fade out with stronger presence
+        const alpha = (1 - p.life / p.maxLife) * p.intensity;
+        if (alpha > 0.05) { // Skip nearly invisible particles
+          aliveparticles.push(p);
+        }
+      }
+      
+      // Render all particles in batches
+      ctx.globalCompositeOperation = 'lighter'; // Additive blending for glow effect
+      
+      for (let i = 0; i < aliveparticles.length; i++) {
+        const p = aliveparticles[i];
         const alpha = (1 - p.life / p.maxLife) * p.intensity;
         
-        if (alpha <= 0) return false;
+        // Simplified single-pass rendering
+        const size = 18 + p.intensity * 6;
+        const gradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, size);
+        gradient.addColorStop(0, `rgba(196, 181, 253, ${alpha * 0.9})`);
+        gradient.addColorStop(0.4, `rgba(139, 92, 246, ${alpha * 0.5})`);
+        gradient.addColorStop(0.7, `rgba(99, 102, 241, ${alpha * 0.2})`);
+        gradient.addColorStop(1, 'rgba(59, 130, 246, 0)');
         
-        // Render particle with bright glow
-        // Outer glow (large, subtle)
-        const outerGlow = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, 24);
-        outerGlow.addColorStop(0, `rgba(168, 85, 247, ${alpha * 0.4})`);
-        outerGlow.addColorStop(0.3, `rgba(139, 92, 246, ${alpha * 0.3})`);
-        outerGlow.addColorStop(0.6, `rgba(99, 102, 241, ${alpha * 0.15})`);
-        outerGlow.addColorStop(1, 'rgba(59, 130, 246, 0)');
-        
-        ctx.fillStyle = outerGlow;
+        ctx.fillStyle = gradient;
         ctx.beginPath();
-        ctx.arc(p.x, p.y, 20 + p.intensity * 8, 0, Math.PI * 2);
+        ctx.arc(p.x, p.y, size, 0, Math.PI * 2);
         ctx.fill();
-        
-        // Inner bright core
-        const coreGradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, 6);
-        coreGradient.addColorStop(0, `rgba(255, 255, 255, ${alpha * 0.9})`);
-        coreGradient.addColorStop(0.3, `rgba(196, 181, 253, ${alpha * 0.8})`);
-        coreGradient.addColorStop(0.7, `rgba(139, 92, 246, ${alpha * 0.5})`);
-        coreGradient.addColorStop(1, `rgba(99, 102, 241, 0)`);
-        
-        ctx.fillStyle = coreGradient;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, 4 + p.intensity * 3, 0, Math.PI * 2);
-        ctx.fill();
-        
-        return true;
-      });
+      }
+      
+      ctx.globalCompositeOperation = 'source-over'; // Reset blending
+      particlesRef.current = aliveparticles;
       
       frameIdRef.current = requestAnimationFrame(animate);
     };
@@ -198,8 +216,8 @@ const Target = memo(function Target({
   wasHit: boolean;
 }) {
   return (
-    <motion.div
-      className="absolute rounded-full border-2 flex items-center justify-center"
+    <div
+      className="absolute rounded-full border-2 flex items-center justify-center transition-all duration-200"
       style={{
         width: TARGET_SIZE,
         height: TARGET_SIZE,
@@ -211,29 +229,18 @@ const Target = memo(function Target({
           : wasHit 
           ? 'rgba(34, 197, 94, 0.1)' 
           : 'transparent',
-      }}
-      animate={{
-        scale: isActive ? [1, 1.1, 1] : 1,
-        boxShadow: isActive 
-          ? '0 0 20px rgba(168, 85, 247, 0.5)' 
-          : 'none',
-      }}
-      transition={{
-        scale: { repeat: Infinity, duration: 1.5 },
+        transform: isActive ? 'scale(1.05)' : 'scale(1)',
+        boxShadow: isActive ? '0 0 20px rgba(168, 85, 247, 0.5)' : 'none',
       }}
     >
       {wasHit && (
-        <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          className="w-2 h-2 rounded-full bg-green-500"
-        />
+        <div className="w-2 h-2 rounded-full bg-green-500" />
       )}
-    </motion.div>
+    </div>
   );
 });
 
-// Cursor component (decoder output)
+// Cursor component (decoder output) - optimized without animations
 const Cursor = memo(function Cursor({
   x,
   y,
@@ -250,16 +257,14 @@ const Cursor = memo(function Cursor({
   const size = type === 'decoded' ? CURSOR_SIZE : CURSOR_SIZE * 0.8;
   
   return (
-    <motion.div
-      className="absolute flex items-center justify-center"
+    <div
+      className="absolute flex items-center justify-center transition-all duration-100"
       style={{
         width: size,
         height: size,
         left: x - size / 2,
         top: y - size / 2,
       }}
-      animate={{ x: 0, y: 0 }}
-      transition={{ type: 'spring', stiffness: 300, damping: 30 }}
     >
       {/* Outer glow */}
       <div
@@ -268,7 +273,7 @@ const Cursor = memo(function Cursor({
       />
       
       {/* Main cursor */}
-      <motion.div
+      <div
         className="relative rounded-full border-2"
         style={{
           width: size,
@@ -276,12 +281,6 @@ const Cursor = memo(function Cursor({
           backgroundColor: color,
           borderColor: 'rgba(255,255,255,0.3)',
           boxShadow: `0 0 ${type === 'decoded' ? 15 : 8}px ${color}`,
-        }}
-        animate={{
-          scale: type === 'decoded' ? [1, 1.05, 1] : 1,
-        }}
-        transition={{
-          scale: { repeat: Infinity, duration: 0.5 },
         }}
       />
       
@@ -294,7 +293,7 @@ const Cursor = memo(function Cursor({
           {label}
         </span>
       )}
-    </motion.div>
+    </div>
   );
 });
 
@@ -409,7 +408,7 @@ export const CenterOutArena = memo(function CenterOutArena() {
         height: ARENA_SIZE,
         background: 'radial-gradient(circle at center, #1a1a2e 0%, #0f0f1a 100%)',
         boxShadow: 'inset 0 0 60px rgba(0,0,0,0.5), 0 0 40px rgba(0,0,0,0.3)',
-        filter: 'contrast(1.1) brightness(1.05)',
+        willChange: 'transform', // Performance hint
       }}
     >
       {/* Neural spike particle background */}
@@ -486,11 +485,12 @@ export const CenterOutArena = memo(function CenterOutArena() {
         <div className="flex items-center gap-2">
           <span className="text-[10px] text-gray-500 uppercase tracking-wider">Error</span>
           <div className="flex-1 h-2 bg-gray-800 rounded-full overflow-hidden">
-            <motion.div
-              className="h-full rounded-full"
-              style={{ backgroundColor: errorToColor(error) }}
-              animate={{ width: `${error * 100}%` }}
-              transition={{ duration: 0.1 }}
+            <div
+              className="h-full rounded-full transition-all duration-100"
+              style={{ 
+                backgroundColor: errorToColor(error),
+                width: `${error * 100}%`
+              }}
             />
           </div>
           <span className="text-[10px] font-mono font-bold" style={{ color: errorToColor(error) }}>
@@ -502,10 +502,9 @@ export const CenterOutArena = memo(function CenterOutArena() {
         <div className="flex items-center gap-2">
           <span className="text-[10px] text-gray-500 uppercase tracking-wider">Neural</span>
           <div className="flex-1 h-1.5 bg-gray-800 rounded-full overflow-hidden">
-            <motion.div
-              className="h-full rounded-full bg-gradient-to-r from-purple-500 via-indigo-500 to-blue-500"
-              animate={{ width: `${Math.min(spikeRate * 10, 100)}%` }}
-              transition={{ duration: 0.1 }}
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-purple-500 via-indigo-500 to-blue-500 transition-all duration-100"
+              style={{ width: `${Math.min(spikeRate * 10, 100)}%` }}
             />
           </div>
           <span className="text-[9px] font-mono text-purple-400">

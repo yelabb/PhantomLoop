@@ -10,7 +10,6 @@ interface CursorProps {
   y: number;
   color: string;
   size: number;
-  emissiveIntensity?: number;
 }
 
 // Memoized cursor component to prevent unnecessary re-renders
@@ -18,8 +17,7 @@ export const Cursor = memo(function Cursor({
   x, 
   y, 
   color, 
-  size,
-  emissiveIntensity = 0.5 
+  size
 }: CursorProps) {
   const meshRef = useRef<Mesh>(null);
   const targetRef = useRef(new Vector3(0, 0, 0));
@@ -50,16 +48,14 @@ export const Cursor = memo(function Cursor({
     }
   });
 
-  // Use lower polygon count for better performance (16 segments instead of 32)
+  // Use lower polygon count for better performance (12 segments instead of 16)
   return (
     <mesh ref={meshRef}>
-      <sphereGeometry args={[size, 16, 16]} />
-      <meshStandardMaterial 
+      <sphereGeometry args={[size, 12, 12]} />
+      <meshBasicMaterial 
         color={colorObj}
-        emissive={colorObj}
-        emissiveIntensity={emissiveIntensity}
-        roughness={0.3}
-        metalness={0.7}
+        transparent
+        opacity={0.9}
       />
     </mesh>
   );
