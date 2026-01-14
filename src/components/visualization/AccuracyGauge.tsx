@@ -128,7 +128,9 @@ const ErrorHistogram = memo(function ErrorHistogram({
     const result = new Array(numBuckets).fill(0);
     
     for (const error of errors) {
-      const bucketIndex = Math.min(Math.floor(error * numBuckets), numBuckets - 1);
+      // Clamp error to 0-1 range and compute bucket index
+      const clampedError = Math.max(0, Math.min(1, error));
+      const bucketIndex = Math.min(Math.floor(clampedError * numBuckets), numBuckets - 1);
       result[bucketIndex]++;
     }
     
@@ -138,11 +140,23 @@ const ErrorHistogram = memo(function ErrorHistogram({
   
   const width = 280;
   const barWidth = width / buckets.length - 3;
+  const hasData = errors.length > 0;
+  
+  // Show placeholder when no data
+  if (!hasData) {
+    return (
+      <div className="flex items-center justify-center" style={{ width, height }}>
+        <span className="text-xs text-gray-600">Waiting for data...</span>
+      </div>
+    );
+  }
   
   return (
     <svg width={width} height={height}>
       {buckets.map((value, i) => {
-        const barHeight = value * (height - 4);
+        // Minimum bar height of 2px for non-empty buckets so they're visible
+        const minBarHeight = value > 0 ? 2 : 0;
+        const barHeight = Math.max(value * (height - 4), minBarHeight);
         const x = i * (barWidth + 2) + 1;
         const y = height - barHeight - 2;
         
