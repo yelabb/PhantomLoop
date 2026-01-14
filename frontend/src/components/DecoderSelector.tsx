@@ -18,16 +18,17 @@ export function DecoderSelector() {
   }, [registerDecoder]);
 
   return (
-    <div className="bg-gray-900/90 backdrop-blur-sm p-4 rounded-lg border border-gray-700 w-80">
+    <div className="bg-gray-900/90 backdrop-blur-sm p-4 rounded-lg border border-gray-700 w-80 pointer-events-auto">
       <h3 className="text-sm font-semibold text-white mb-3">Decoder</h3>
       
       <select
         value={activeDecoder?.id || ''}
         onChange={(e) => {
+          console.log('[DecoderSelector] Selected:', e.target.value);
           const decoder = availableDecoders.find(d => d.id === e.target.value);
           setActiveDecoder(decoder || null);
         }}
-        className="w-full bg-gray-800 text-white px-3 py-2 rounded text-sm border border-gray-600 focus:border-loopback focus:outline-none"
+        className="w-full bg-gray-800 text-white px-3 py-2 rounded text-sm border border-gray-600 focus:border-loopback focus:outline-none cursor-pointer"
       >
         <option value="">None (Phantom only)</option>
         {availableDecoders.map(decoder => (

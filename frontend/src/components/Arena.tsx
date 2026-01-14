@@ -7,7 +7,7 @@ import { BioLinkCursor } from './BioLinkCursor';
 import { LoopBackCursor } from './LoopBackCursor';
 import { TargetMarker } from './TargetMarker';
 import { GridFloor } from './GridFloor';
-import { TrajectoryLine } from './TrajectoryLine';
+import { ErrorLines } from './ErrorLines';
 import { CameraController } from './CameraController';
 import { useStore } from '../store';
 import { normalizePosition } from '../utils/coordinates';
@@ -66,10 +66,8 @@ export function Arena() {
               {showBioLink && <BioLinkCursor x={bioLinkPos.x} y={bioLinkPos.y} />}
               {showLoopBack && <LoopBackCursor x={loopBackPos.x} y={loopBackPos.y} />}
 
-              {/* Trajectory Trails */}
-              {showTrails && showPhantom && <TrajectoryLine color="#FFD700" type="phantom" />}
-              {showTrails && showBioLink && <TrajectoryLine color="#00FF00" type="biolink" />}
-              {showTrails && showLoopBack && <TrajectoryLine color="#0080FF" type="loopback" />}
+              {/* Error Lines - show distance between cursors */}
+              {showTrails && <ErrorLines />}
 
               {/* Target Marker */}
               {showTarget && <TargetMarker x={phantomPos.x} y={phantomPos.y} />}

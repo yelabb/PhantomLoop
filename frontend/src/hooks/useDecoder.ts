@@ -59,10 +59,10 @@ export function useDecoder() {
         updateDecoderLatency(output.latency);
       } catch (error) {
         console.error('[useDecoder] Processing error:', error);
-        // On error, use passthrough
+        // On error, use passthrough with corrected path
         const fallbackOutput: DecoderOutput = {
-          x: currentPacket.data.kinematics.cursor_pos.x,
-          y: currentPacket.data.kinematics.cursor_pos.y,
+          x: currentPacket.data.kinematics.x,
+          y: currentPacket.data.kinematics.y,
           latency: performance.now() - startTime,
         };
         updateDecoderOutput(fallbackOutput);
