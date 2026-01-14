@@ -63,10 +63,13 @@ export function useMessagePack() {
     };
 
     websocket.addEventListener('message', handleMessage);
+    
+    // Capture current value for cleanup
+    const currentPacketCount = packetCountRef.current;
 
     return () => {
       websocket.removeEventListener('message', handleMessage);
-      console.log(`[PhantomLoop] 🔇 Disconnected after ${packetCountRef.current} packets`);
+      console.log(`[PhantomLoop] 🔇 Disconnected after ${currentPacketCount} packets`);
     };
   }, [websocket, isConnected, receivePacket, updateNetworkLatency]);
 }

@@ -1,33 +1,47 @@
-// Visualization Controls Component - Optimized with selectors
+// Visualization Controls Component - Optimized with improved UI
 
 import { memo } from 'react';
 import { useStore } from '../store';
 
-// Define CheckboxItem outside the component
-const CheckboxItem = memo(({ 
+// Toggle switch component
+const ToggleSwitch = memo(function ToggleSwitch({ 
   label, 
   checked, 
   onChange, 
-  color 
+  color,
+  icon,
 }: { 
   label: string; 
   checked: boolean; 
   onChange: () => void;
   color?: string;
-}) => (
-  <label className="flex items-center gap-2 cursor-pointer hover:bg-gray-800/50 p-2 rounded transition">
-    <input
-      type="checkbox"
-      checked={checked}
-      onChange={onChange}
-      className="w-4 h-4 rounded accent-phantom"
-    />
-    <span className={`text-sm ${color || 'text-white'}`}>{label}</span>
-  </label>
-));
+  icon?: string;
+}) {
+  return (
+    <button 
+      onClick={onChange}
+      className="flex items-center justify-between cursor-pointer hover:bg-gray-800/30 px-2 py-1.5 rounded-lg transition-all duration-200 group w-full text-left"
+    >
+      <div className="flex items-center gap-2">
+        {icon && <span className="text-sm">{icon}</span>}
+        <span className={`text-sm transition-colors duration-200 ${
+          checked ? (color || 'text-white') : 'text-gray-500'
+        }`}>{label}</span>
+      </div>
+      <div className={`relative w-8 h-4 rounded-full transition-all duration-200 ${
+        checked ? 'bg-gray-600' : 'bg-gray-800'
+      }`}>
+        <div className={`absolute top-0.5 w-3 h-3 rounded-full transition-all duration-200 ${
+          checked 
+            ? `left-4 ${color?.replace('text-', 'bg-') || 'bg-white'}` 
+            : 'left-0.5 bg-gray-600'
+        }`} />
+      </div>
+    </button>
+  );
+});
 
 export const VisualizationControls = memo(function VisualizationControls() {
-  // Use individual selectors to prevent unnecessary re-renders
   const showPhantom = useStore((state) => state.showPhantom);
   const showBioLink = useStore((state) => state.showBioLink);
   const showLoopBack = useStore((state) => state.showLoopBack);
@@ -44,27 +58,33 @@ export const VisualizationControls = memo(function VisualizationControls() {
   const setCameraMode = useStore((state) => state.setCameraMode);
 
   return (
-    <div className="bg-gray-900/90 backdrop-blur-sm p-4 rounded-lg border border-gray-700 w-80">
-      <h3 className="text-sm font-semibold text-white mb-3">Visualization</h3>
+    <div className="glass-panel p-4 rounded-xl w-80 pointer-events-auto animate-slide-up" style={{ animationDelay: '0.2s' }}>
+      <div className="flex items-center gap-2 mb-3">
+        <div className="w-2 h-2 rounded-full bg-biolink animate-pulse" />
+        <h3 className="text-sm font-semibold text-white">Visualization</h3>
+      </div>
       
       {/* Trinity Toggles */}
       <div className="mb-4">
-        <p className="text-xs text-gray-400 mb-2">Trinity Cursors</p>
-        <div className="flex flex-col gap-1">
-          <CheckboxItem
-            label="🟡 Phantom (Intention)"
+        <p className="text-xs text-gray-500 uppercase tracking-wider mb-2">Cursors</p>
+        <div className="flex flex-col">
+          <ToggleSwitch
+            icon="◉"
+            label="Phantom"
             checked={showPhantom}
             onChange={togglePhantom}
             color="text-phantom"
           />
-          <CheckboxItem
-            label="🟢 Bio-Link (Ground Truth)"
+          <ToggleSwitch
+            icon="◉"
+            label="Bio-Link"
             checked={showBioLink}
             onChange={toggleBioLink}
             color="text-biolink"
           />
-          <CheckboxItem
-            label="🔵 Loop-Back (Decoder)"
+          <ToggleSwitch
+            icon="◉"
+            label="Loop-Back"
             checked={showLoopBack}
             onChange={toggleLoopBack}
             color="text-loopback"
@@ -73,21 +93,21 @@ export const VisualizationControls = memo(function VisualizationControls() {
       </div>
 
       {/* Other Options */}
-      <div className="mb-4">
-        <p className="text-xs text-gray-400 mb-2">Environment</p>
-        <div className="flex flex-col gap-1">
-          <CheckboxItem
-            label="Trajectory Trails"
+      <div className="mb-4 pt-2 border-t border-gray-700/50">
+        <p className="text-xs text-gray-500 uppercase tracking-wider mb-2">Environment</p>
+        <div className="flex flex-col">
+          <ToggleSwitch
+            label="Trails"
             checked={showTrails}
             onChange={toggleTrails}
           />
-          <CheckboxItem
-            label="Target Marker"
+          <ToggleSwitch
+            label="Target"
             checked={showTarget}
             onChange={toggleTarget}
           />
-          <CheckboxItem
-            label="Grid Floor"
+          <ToggleSwitch
+            label="Grid"
             checked={showGrid}
             onChange={toggleGrid}
           />
@@ -95,17 +115,17 @@ export const VisualizationControls = memo(function VisualizationControls() {
       </div>
 
       {/* Camera Mode */}
-      <div>
-        <p className="text-xs text-gray-400 mb-2">Camera</p>
-        <div className="flex gap-2">
+      <div className="pt-2 border-t border-gray-700/50">
+        <p className="text-xs text-gray-500 uppercase tracking-wider mb-2">Camera</p>
+        <div className="flex gap-1.5">
           {(['top', 'perspective', 'side'] as const).map(mode => (
             <button
               key={mode}
               onClick={() => setCameraMode(mode)}
-              className={`flex-1 px-3 py-2 rounded text-xs font-medium transition ${
+              className={`flex-1 px-2 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
                 cameraMode === mode
-                  ? 'bg-phantom text-black'
-                  : 'bg-gray-800 text-white hover:bg-gray-700'
+                  ? 'bg-gradient-to-r from-phantom/80 to-yellow-500/80 text-black shadow-lg shadow-phantom/20'
+                  : 'bg-gray-800/80 text-gray-400 hover:bg-gray-700/80 hover:text-white'
               }`}
             >
               {mode.charAt(0).toUpperCase() + mode.slice(1)}

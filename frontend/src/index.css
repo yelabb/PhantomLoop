@@ -22,3 +22,139 @@ code {
 canvas {
   display: block;
 }
+
+/* Custom animations */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes slide-up {
+  from { 
+    opacity: 0; 
+    transform: translateY(20px); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0); 
+  }
+}
+
+@keyframes slide-down {
+  from { 
+    opacity: 0; 
+    transform: translateY(-20px); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0); 
+  }
+}
+
+@keyframes loading-bar {
+  0% { 
+    transform: translateX(-100%); 
+    width: 30%;
+  }
+  50% { 
+    width: 60%;
+  }
+  100% { 
+    transform: translateX(400%); 
+    width: 30%;
+  }
+}
+
+@keyframes neural-spike {
+  0%, 100% { 
+    opacity: 0.2; 
+    stroke-width: 1;
+  }
+  50% { 
+    opacity: 0.8; 
+    stroke-width: 2;
+  }
+}
+
+@keyframes glow-pulse {
+  0%, 100% {
+    box-shadow: 0 0 5px currentColor, 0 0 10px currentColor;
+    opacity: 0.8;
+  }
+  50% {
+    box-shadow: 0 0 20px currentColor, 0 0 40px currentColor;
+    opacity: 1;
+  }
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out forwards;
+}
+
+.animate-fade-out {
+  animation: fade-out 0.3s ease-out forwards;
+}
+
+.animate-slide-up {
+  animation: slide-up 0.4s ease-out forwards;
+}
+
+.animate-slide-down {
+  animation: slide-down 0.4s ease-out forwards;
+}
+
+.animate-loading-bar {
+  animation: loading-bar 1.5s ease-in-out infinite;
+}
+
+.animate-neural-spike {
+  animation: neural-spike 0.8s ease-in-out infinite;
+}
+
+.animate-glow-pulse {
+  animation: glow-pulse 2s ease-in-out infinite;
+}
+
+.animate-spin-slow {
+  animation: spin-slow 3s linear infinite;
+}
+
+/* Smooth transitions for UI elements */
+.ui-panel {
+  @apply transition-all duration-300 ease-out;
+}
+
+/* Glass morphism panels */
+.glass-panel {
+  @apply bg-gray-900/80 backdrop-blur-md border border-gray-700/50 shadow-xl;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1a1a1a;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #3a3a3a;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #4a4a4a;
+}

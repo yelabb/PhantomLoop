@@ -7,12 +7,13 @@ export interface DecoderSlice {
   activeDecoder: Decoder | null;
   decoderOutput: DecoderOutput | null;
   availableDecoders: Decoder[];
-  isProcessing: boolean;
+  isDecoderLoading: boolean;
+  decoderLoadingMessage: string;
   
   setActiveDecoder: (decoder: Decoder | null) => void;
   updateDecoderOutput: (output: DecoderOutput) => void;
   registerDecoder: (decoder: Decoder) => void;
-  setProcessing: (isProcessing: boolean) => void;
+  setDecoderLoading: (isLoading: boolean, message?: string) => void;
 }
 
 export const createDecoderSlice: StateCreator<
@@ -24,7 +25,8 @@ export const createDecoderSlice: StateCreator<
   activeDecoder: null,
   decoderOutput: null,
   availableDecoders: [],
-  isProcessing: false,
+  isDecoderLoading: false,
+  decoderLoadingMessage: '',
 
   setActiveDecoder: (decoder: Decoder | null) => {
     console.log(`[PhantomLoop] Decoder changed:`, decoder?.name || 'None');
@@ -52,7 +54,10 @@ export const createDecoderSlice: StateCreator<
     }
   },
 
-  setProcessing: (isProcessing: boolean) => {
-    set({ isProcessing });
+  setDecoderLoading: (isLoading: boolean, message = '') => {
+    set({ 
+      isDecoderLoading: isLoading,
+      decoderLoadingMessage: message,
+    });
   },
 });
