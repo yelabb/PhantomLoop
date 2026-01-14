@@ -1,10 +1,9 @@
 // Center-Out Arena - 2D Top-down visualization optimized for researchers
 // Shows targets, cursor trajectories, and real-time error visualization
 
-import { memo, useMemo, useRef, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { memo, useMemo, useReducer, useRef } from 'react';
+import { motion } from 'framer-motion';
 import { useStore } from '../../store';
-import { normalizePosition } from '../../utils/coordinates';
 import { COLORS } from '../../utils/constants';
 
 interface Point {
@@ -12,17 +11,12 @@ interface Point {
   y: number;
 }
 
-interface TrailPoint extends Point {
-  timestamp: number;
-  error: number;
-}
-
 // Constants
-const ARENA_SIZE = 400;
+const ARENA_SIZE = 480;
 const CENTER = ARENA_SIZE / 2;
-const TARGET_RADIUS = 180;
-const CURSOR_SIZE = 16;
-const TARGET_SIZE = 24;
+const TARGET_RADIUS = 210;
+const CURSOR_SIZE = 18;
+const TARGET_SIZE = 28;
 const TRAIL_MAX_LENGTH = 60;
 
 // Target positions (8 directions like Neuralink's center-out task)
@@ -254,9 +248,10 @@ export const CenterOutArena = memo(function CenterOutArena() {
   const currentPacket = useStore((state) => state.currentPacket);
   const decoderOutput = useStore((state) => state.decoderOutput);
   
-  // Trail history
+  // Trail history - using refs with a counter for safe updates
   const groundTruthTrailRef = useRef<Point[]>([]);
   const decodedTrailRef = useRef<Point[]>([]);
+  const [, forceRender] = useReducer(x => x + 1, 0);
   
   // Active target (based on intention)
   const activeTarget = useMemo(() => {
@@ -285,7 +280,7 @@ export const CenterOutArena = memo(function CenterOutArena() {
     if (!currentPacket?.data?.kinematics) return { x: CENTER, y: CENTER };
     const { x, y } = currentPacket.data.kinematics;
     return toArenaCoords(x, y);
-  }, [currentPacket?.data?.kinematics]);
+  }, [currentPacket]);
   
   // Decoded position (LoopBack)
   const decodedPos = useMemo(() => {
@@ -299,17 +294,31 @@ export const CenterOutArena = memo(function CenterOutArena() {
     return Math.min(d / (ARENA_SIZE / 2), 1);
   }, [groundTruthPos, decodedPos]);
   
-  // Update trails
-  useEffect(() => {
-    groundTruthTrailRef.current = [
-      ...groundTruthTrailRef.current.slice(-TRAIL_MAX_LENGTH),
-      groundTruthPos,
-    ];
-    decodedTrailRef.current = [
-      ...decodedTrailRef.current.slice(-TRAIL_MAX_LENGTH),
-      decodedPos,
-    ];
-  }, [groundTruthPos, decodedPos]);
+  // Update trails inline (before render) - avoids useEffect setState issues
+  // This is safe because we're only mutating refs
+  if (groundTruthPos.x !== CENTER || groundTruthPos.y !== CENTER) {
+    const lastGT = groundTruthTrailRef.current[groundTruthTrailRef.current.length - 1];
+    if (!lastGT || lastGT.x !== groundTruthPos.x || lastGT.y !== groundTruthPos.y) {
+      groundTruthTrailRef.current = [
+        ...groundTruthTrailRef.current.slice(-TRAIL_MAX_LENGTH + 1),
+        groundTruthPos,
+      ];
+    }
+  }
+  
+  if (decoderOutput) {
+    const lastDec = decodedTrailRef.current[decodedTrailRef.current.length - 1];
+    if (!lastDec || lastDec.x !== decodedPos.x || lastDec.y !== decodedPos.y) {
+      decodedTrailRef.current = [
+        ...decodedTrailRef.current.slice(-TRAIL_MAX_LENGTH + 1),
+        decodedPos,
+      ];
+    }
+  }
+  
+  // Copy refs to local vars for render (avoids compiler warnings)
+  const groundTruthTrail = groundTruthTrailRef.current;
+  const decodedTrail = decodedTrailRef.current;
   
   return (
     <div 
@@ -339,8 +348,8 @@ export const CenterOutArena = memo(function CenterOutArena() {
       </svg>
       
       {/* Trails */}
-      <Trail points={groundTruthTrailRef.current} color={COLORS.BIOLINK} />
-      {decoderOutput && <Trail points={decodedTrailRef.current} color={COLORS.LOOPBACK} />}
+      <Trail points={groundTruthTrail} color={COLORS.BIOLINK} />
+      {decoderOutput && <Trail points={decodedTrail} color={COLORS.LOOPBACK} />}
       
       {/* Error line */}
       {decoderOutput && (

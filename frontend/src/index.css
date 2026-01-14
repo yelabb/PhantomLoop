@@ -156,25 +156,64 @@ canvas {
 
 /* Glass morphism panels */
 .glass-panel {
-  @apply bg-gray-900/80 backdrop-blur-md border border-gray-700/50 shadow-xl;
+  @apply bg-gray-900/90 backdrop-blur-xl border border-gray-700/40 shadow-2xl;
+}
+
+/* Dashboard card styling */
+.dashboard-card {
+  @apply bg-gray-900/95 backdrop-blur-xl rounded-2xl border border-gray-700/30 shadow-2xl;
+  @apply transition-all duration-300 ease-out;
+  @apply hover:border-gray-600/50 hover:shadow-purple-500/5;
+}
+
+/* Dashboard sidebar */
+.dashboard-sidebar {
+  @apply flex flex-col gap-5 p-5;
+  @apply bg-gray-950/80 backdrop-blur-2xl;
+  @apply border-r border-gray-800/50;
+}
+
+/* Dashboard header */
+.dashboard-header {
+  @apply px-6 py-4 bg-gray-950/90 backdrop-blur-xl;
+  @apply border-b border-gray-800/50;
+}
+
+/* Stat card with improved visibility */
+.stat-card {
+  @apply p-5 rounded-xl border backdrop-blur-sm;
+  @apply min-h-[100px] flex flex-col justify-between;
 }
 
 /* Scrollbar styling */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #1a1a1a;
-  border-radius: 3px;
+  background: rgba(17, 17, 17, 0.5);
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #3a3a3a;
-  border-radius: 3px;
+  background: rgba(80, 80, 80, 0.6);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #4a4a4a;
+  background: rgba(100, 100, 100, 0.8);
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide scrollbar for IE, Edge and Firefox */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }

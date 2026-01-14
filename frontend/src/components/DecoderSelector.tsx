@@ -108,23 +108,23 @@ export const DecoderSelector = memo(function DecoderSelector() {
   const jsDecoders = availableDecoders.filter(d => d.type === 'javascript');
 
   return (
-    <div className="glass-panel p-4 rounded-xl w-80 pointer-events-auto animate-slide-up" style={{ animationDelay: '0.1s' }}>
-      <div className="flex justify-between items-center mb-3">
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-loopback animate-pulse" />
-          <h3 className="text-sm font-semibold text-white">Decoder</h3>
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse shadow-lg shadow-blue-500/50" />
+          <span className="text-sm font-medium text-white">Active Decoder</span>
         </div>
         <BackendIndicator />
       </div>
       
-      <div className="flex gap-2">
+      <div className="flex gap-3">
         <div className="relative flex-1">
           <select
             value={activeDecoder?.id || ''}
             onChange={handleDecoderChange}
             disabled={isLoading}
-            className={`w-full bg-gray-800/80 text-white px-3 py-2.5 rounded-lg text-sm border border-gray-600/50 
-              focus:border-loopback focus:outline-none focus:ring-1 focus:ring-loopback/50
+            className={`w-full bg-gray-800/80 text-white px-4 py-3 rounded-xl text-sm border border-gray-600/50 
+              focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30
               cursor-pointer transition-all duration-200
               ${isLoading ? 'opacity-50 cursor-wait' : 'hover:border-gray-500'}`}
           >
@@ -162,7 +162,7 @@ export const DecoderSelector = memo(function DecoderSelector() {
           </select>
           
           {isLoading && (
-            <div className="absolute right-3 top-1/2 -translate-y-1/2">
+            <div className="absolute right-4 top-1/2 -translate-y-1/2">
               <Spinner size="sm" color="loopback" />
             </div>
           )}
@@ -172,8 +172,8 @@ export const DecoderSelector = memo(function DecoderSelector() {
         <button
           onClick={() => setShowAddModal(true)}
           disabled={isLoading}
-          className="px-3 py-2.5 bg-gray-800/80 text-gray-400 hover:text-loopback rounded-lg text-sm border border-gray-600/50 
-            hover:border-loopback/50 transition-all duration-200 disabled:opacity-50"
+          className="px-4 py-3 bg-gray-800 text-gray-400 hover:text-blue-400 rounded-xl text-sm font-bold border border-gray-600/50 
+            hover:border-blue-500/50 transition-all duration-200 disabled:opacity-50"
           title="Add custom decoder from URL"
         >
           +
@@ -188,49 +188,51 @@ export const DecoderSelector = memo(function DecoderSelector() {
 
       {/* Loading state */}
       {isLoading && (
-        <div className="mt-3 p-3 rounded-lg bg-loopback/10 border border-loopback/30 animate-fade-in">
-          <div className="flex items-center gap-2">
+        <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/30 animate-fade-in">
+          <div className="flex items-center gap-3">
             <Spinner size="xs" color="loopback" />
-            <span className="text-xs text-loopback">Loading {loadingName}...</span>
+            <span className="text-sm text-blue-400">Loading {loadingName}...</span>
           </div>
-          <p className="text-xs text-gray-500 mt-1">Initializing model...</p>
+          <p className="text-xs text-gray-500 mt-2">Initializing neural network model...</p>
         </div>
       )}
 
       {/* Active decoder info */}
       {activeDecoder && !isLoading && (
-        <div className="mt-3 p-3 rounded-lg bg-gray-800/50 animate-fade-in">
-          <div className="flex items-center justify-between mb-2">
-            <span className="font-medium text-sm text-white">{activeDecoder.name}</span>
-            <div className="flex gap-1">
+        <div className="p-4 rounded-xl bg-gray-800/50 border border-gray-700/30 animate-fade-in">
+          <div className="flex items-center justify-between mb-3">
+            <span className="font-semibold text-sm text-white">{activeDecoder.name}</span>
+            <div className="flex gap-2">
               {activeDecoder.source?.type && (
-                <span className="text-xs px-2 py-0.5 rounded-full bg-gray-700/50 text-gray-400">
+                <span className="text-xs px-2.5 py-1 rounded-full bg-gray-700/50 text-gray-400">
                   {activeDecoder.source.type}
                 </span>
               )}
               {activeDecoder.type === 'tfjs' && (
-                <span className="text-xs px-2 py-0.5 rounded-full bg-loopback/20 text-loopback">
+                <span className="text-xs px-2.5 py-1 rounded-full bg-blue-500/20 text-blue-400">
                   Neural
                 </span>
               )}
             </div>
           </div>
           
-          <p className="text-xs text-gray-400 leading-relaxed">{activeDecoder.description}</p>
+          <p className="text-sm text-gray-400 leading-relaxed">{activeDecoder.description}</p>
           
           {activeDecoder.architecture && (
-            <p className="mt-2 font-mono text-xs text-gray-500 bg-gray-900/50 px-2 py-1 rounded">
+            <p className="mt-3 font-mono text-xs text-gray-500 bg-gray-900/50 px-3 py-2 rounded-lg">
               {activeDecoder.architecture}
             </p>
           )}
           
           {activeDecoder.params && (
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-gray-500 mt-2">
               {activeDecoder.params.toLocaleString()} parameters
             </p>
           )}
           
-          <LatencyDisplay />
+          <div className="mt-3 pt-3 border-t border-gray-700/30">
+            <LatencyDisplay />
+          </div>
         </div>
       )}
     </div>

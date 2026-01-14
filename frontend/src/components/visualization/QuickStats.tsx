@@ -2,7 +2,7 @@
 // Large, clear numbers that are visible from across the room
 
 import { memo, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useStore } from '../../store';
 
 interface StatCardProps {
@@ -33,7 +33,7 @@ const StatCard = memo(function StatCard({
   
   return (
     <motion.div
-      className="flex flex-col p-3 rounded-xl border backdrop-blur-sm"
+      className="stat-card"
       style={{
         backgroundColor: colors.bg,
         borderColor: colors.border,
@@ -42,16 +42,16 @@ const StatCard = memo(function StatCard({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
     >
-      <div className="flex items-center justify-between mb-1">
-        <span className="text-[10px] font-medium uppercase tracking-wider text-gray-400">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-xs font-medium uppercase tracking-wider text-gray-400">
           {label}
         </span>
         {icon && <span style={{ color: colors.text }}>{icon}</span>}
       </div>
       
-      <div className="flex items-baseline gap-1">
+      <div className="flex items-baseline gap-1.5">
         <motion.span
-          className="text-2xl font-bold font-mono"
+          className="text-3xl font-bold font-mono"
           style={{ color: colors.text }}
           key={String(value)}
           initial={{ scale: 1.1 }}
@@ -61,14 +61,14 @@ const StatCard = memo(function StatCard({
           {typeof value === 'number' ? value.toFixed(value < 10 ? 1 : 0) : value}
         </motion.span>
         {unit && (
-          <span className="text-sm font-medium" style={{ color: colors.text, opacity: 0.7 }}>
+          <span className="text-base font-medium" style={{ color: colors.text, opacity: 0.7 }}>
             {unit}
           </span>
         )}
       </div>
       
       {subtitle && (
-        <span className="text-[9px] text-gray-500 mt-1">{subtitle}</span>
+        <span className="text-xs text-gray-500 mt-2">{subtitle}</span>
       )}
     </motion.div>
   );
@@ -81,9 +81,9 @@ const DecoderBadge = memo(function DecoderBadge() {
   
   if (!activeDecoder) {
     return (
-      <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-800/50 border border-gray-700/50">
-        <div className="w-2 h-2 rounded-full bg-gray-500" />
-        <span className="text-xs font-medium text-gray-400">No decoder active</span>
+      <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-gray-800/50 border border-gray-700/50">
+        <div className="w-2.5 h-2.5 rounded-full bg-gray-500" />
+        <span className="text-sm font-medium text-gray-400">No decoder active</span>
       </div>
     );
   }
@@ -92,22 +92,22 @@ const DecoderBadge = memo(function DecoderBadge() {
   
   return (
     <div 
-      className="flex items-center gap-2 px-3 py-2 rounded-lg border"
+      className="flex items-center gap-3 px-4 py-3 rounded-xl border"
       style={{
         backgroundColor: isHealthy ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
         borderColor: isHealthy ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)',
       }}
     >
       <motion.div 
-        className="w-2 h-2 rounded-full"
+        className="w-2.5 h-2.5 rounded-full"
         style={{ backgroundColor: isHealthy ? '#22c55e' : '#ef4444' }}
         animate={{ scale: [1, 1.2, 1] }}
         transition={{ repeat: Infinity, duration: 1 }}
       />
-      <span className="text-xs font-semibold" style={{ color: isHealthy ? '#22c55e' : '#ef4444' }}>
+      <span className="text-sm font-semibold" style={{ color: isHealthy ? '#22c55e' : '#ef4444' }}>
         {activeDecoder.name}
       </span>
-      <span className="text-[10px] text-gray-400 font-mono">
+      <span className="text-xs text-gray-400 font-mono ml-auto">
         {decoderLatency.toFixed(1)}ms
       </span>
     </div>
@@ -127,14 +127,6 @@ const AccuracyIcon = () => (
     <circle cx="12" cy="12" r="10" />
     <circle cx="12" cy="12" r="6" />
     <circle cx="12" cy="12" r="2" />
-  </svg>
-);
-
-const PacketIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-    <line x1="3" y1="9" x2="21" y2="9" />
-    <line x1="9" y1="21" x2="9" y2="9" />
   </svg>
 );
 
@@ -168,15 +160,14 @@ export const QuickStats = memo(function QuickStats() {
   
   // Packet loss rate
   const lossRate = packetsReceived > 0 ? (droppedPackets / packetsReceived) * 100 : 0;
-  const packetStatus = lossRate < 1 ? 'good' : lossRate < 5 ? 'warning' : 'bad';
   
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-4">
       {/* Decoder badge */}
       <DecoderBadge />
       
       {/* Main stats grid */}
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-2 gap-3">
         <StatCard
           label="Accuracy"
           value={accuracy * 100}
@@ -211,24 +202,24 @@ export const QuickStats = memo(function QuickStats() {
       </div>
       
       {/* Secondary stats */}
-      <div className="grid grid-cols-3 gap-2">
-        <div className="flex flex-col items-center p-2 bg-gray-800/30 rounded-lg">
-          <span className="text-[9px] text-gray-500 uppercase">FPS</span>
-          <span className={`text-sm font-mono font-bold ${fps >= 55 ? 'text-green-400' : 'text-yellow-400'}`}>
+      <div className="grid grid-cols-3 gap-3">
+        <div className="flex flex-col items-center p-3 bg-gray-800/40 rounded-xl border border-gray-700/30">
+          <span className="text-xs text-gray-500 uppercase tracking-wider mb-1">FPS</span>
+          <span className={`text-lg font-mono font-bold ${fps >= 55 ? 'text-green-400' : 'text-yellow-400'}`}>
             {fps.toFixed(0)}
           </span>
         </div>
         
-        <div className="flex flex-col items-center p-2 bg-gray-800/30 rounded-lg">
-          <span className="text-[9px] text-gray-500 uppercase">Packets</span>
-          <span className="text-sm font-mono font-bold text-gray-300">
+        <div className="flex flex-col items-center p-3 bg-gray-800/40 rounded-xl border border-gray-700/30">
+          <span className="text-xs text-gray-500 uppercase tracking-wider mb-1">Packets</span>
+          <span className="text-lg font-mono font-bold text-gray-300">
             {packetsReceived}
           </span>
         </div>
         
-        <div className="flex flex-col items-center p-2 bg-gray-800/30 rounded-lg">
-          <span className="text-[9px] text-gray-500 uppercase">Loss</span>
-          <span className={`text-sm font-mono font-bold ${lossRate < 1 ? 'text-green-400' : 'text-red-400'}`}>
+        <div className="flex flex-col items-center p-3 bg-gray-800/40 rounded-xl border border-gray-700/30">
+          <span className="text-xs text-gray-500 uppercase tracking-wider mb-1">Loss</span>
+          <span className={`text-lg font-mono font-bold ${lossRate < 1 ? 'text-green-400' : 'text-red-400'}`}>
             {lossRate.toFixed(1)}%
           </span>
         </div>

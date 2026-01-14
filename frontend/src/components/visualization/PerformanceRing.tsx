@@ -2,7 +2,7 @@
 // Inspired by fitness rings but for BCI performance
 
 import { memo, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 
 interface PerformanceRingProps {
   /** Decoder accuracy 0-1 */

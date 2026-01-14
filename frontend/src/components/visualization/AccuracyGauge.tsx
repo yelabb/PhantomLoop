@@ -1,7 +1,7 @@
 // Accuracy Gauge - Live-updating sparkline and histogram for decoder performance
 // Shows rolling accuracy over time and error distribution
 
-import { memo, useMemo, useRef, useEffect, useState } from 'react';
+import { memo, useMemo, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 
 interface AccuracyGaugeProps {
@@ -17,7 +17,7 @@ interface AccuracyGaugeProps {
 const Sparkline = memo(function Sparkline({
   data,
   color,
-  height = 40,
+  height = 50,
   threshold,
 }: {
   data: number[];
@@ -27,8 +27,8 @@ const Sparkline = memo(function Sparkline({
 }) {
   if (data.length < 2) return null;
   
-  const width = 160;
-  const padding = 2;
+  const width = 280;
+  const padding = 4;
   const effectiveWidth = width - padding * 2;
   const effectiveHeight = height - padding * 2;
   
@@ -116,7 +116,7 @@ const Sparkline = memo(function Sparkline({
 // Error distribution histogram
 const ErrorHistogram = memo(function ErrorHistogram({
   errors,
-  height = 30,
+  height = 40,
 }: {
   errors: number[];
   height?: number;
@@ -135,8 +135,8 @@ const ErrorHistogram = memo(function ErrorHistogram({
     return result.map(count => count / maxCount);
   }, [errors]);
   
-  const width = 160;
-  const barWidth = width / buckets.length - 2;
+  const width = 280;
+  const barWidth = width / buckets.length - 3;
   
   return (
     <svg width={width} height={height}>
@@ -174,36 +174,27 @@ export const AccuracyGauge = memo(function AccuracyGauge({
   error,
   historyLength = 60,
 }: AccuracyGaugeProps) {
-  // History buffers
-  const accuracyHistoryRef = useRef<number[]>([]);
-  const errorHistoryRef = useRef<number[]>([]);
-  const [, forceUpdate] = useState(0);
+  // History buffers - using state for React Compiler compatibility
+  const [accuracyHistory, setAccuracyHistory] = useState<number[]>([]);
+  const [errorHistory, setErrorHistory] = useState<number[]>([]);
   
   // Update histories
   useEffect(() => {
-    accuracyHistoryRef.current = [
-      ...accuracyHistoryRef.current.slice(-(historyLength - 1)),
-      accuracy,
-    ];
-    errorHistoryRef.current = [
-      ...errorHistoryRef.current.slice(-(historyLength - 1)),
-      error,
-    ];
-    forceUpdate(n => n + 1);
+    setAccuracyHistory(prev => [...prev.slice(-(historyLength - 1)), accuracy]);
+    setErrorHistory(prev => [...prev.slice(-(historyLength - 1)), error]);
   }, [accuracy, error, historyLength]);
   
   // Statistics
   const stats = useMemo(() => {
-    const history = accuracyHistoryRef.current;
-    if (history.length === 0) return { avg: 0, min: 0, max: 0, trend: 0 };
+    if (accuracyHistory.length === 0) return { avg: 0, min: 0, max: 0, trend: 0 };
     
-    const avg = history.reduce((a, b) => a + b, 0) / history.length;
-    const min = Math.min(...history);
-    const max = Math.max(...history);
+    const avg = accuracyHistory.reduce((a, b) => a + b, 0) / accuracyHistory.length;
+    const min = Math.min(...accuracyHistory);
+    const max = Math.max(...accuracyHistory);
     
     // Calculate trend (positive = improving)
-    const recentHalf = history.slice(-Math.floor(history.length / 2));
-    const olderHalf = history.slice(0, Math.floor(history.length / 2));
+    const recentHalf = accuracyHistory.slice(-Math.floor(accuracyHistory.length / 2));
+    const olderHalf = accuracyHistory.slice(0, Math.floor(accuracyHistory.length / 2));
     const recentAvg = recentHalf.length > 0 
       ? recentHalf.reduce((a, b) => a + b, 0) / recentHalf.length 
       : 0;
@@ -213,7 +204,7 @@ export const AccuracyGauge = memo(function AccuracyGauge({
     const trend = recentAvg - olderAvg;
     
     return { avg, min, max, trend };
-  }, [accuracyHistoryRef.current.length]);
+  }, [accuracyHistory]);
   
   // Trend color and icon
   const trendColor = stats.trend > 0.02 ? '#22c55e' : stats.trend < -0.02 ? '#ef4444' : '#6b7280';
@@ -223,21 +214,21 @@ export const AccuracyGauge = memo(function AccuracyGauge({
   const statusColor = accuracy >= 0.8 ? '#22c55e' : accuracy >= 0.6 ? '#eab308' : '#ef4444';
   
   return (
-    <div className="flex flex-col gap-3 p-3 bg-gray-900/80 backdrop-blur-sm rounded-xl border border-gray-700/50">
+    <div className="flex flex-col gap-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
-          Decoder Accuracy
+          Live Accuracy
         </span>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <span 
-            className="text-lg font-bold font-mono"
+            className="text-2xl font-bold font-mono"
             style={{ color: statusColor }}
           >
             {(accuracy * 100).toFixed(1)}%
           </span>
           <span 
-            className="text-sm font-bold"
+            className="text-lg font-bold"
             style={{ color: trendColor }}
           >
             {trendIcon}
@@ -246,47 +237,48 @@ export const AccuracyGauge = memo(function AccuracyGauge({
       </div>
       
       {/* Sparkline */}
-      <div className="flex flex-col gap-1">
+      <div className="flex flex-col gap-2">
         <Sparkline
-          data={accuracyHistoryRef.current}
+          data={accuracyHistory}
           color={statusColor}
+          height={50}
           threshold={0.7}
         />
-        <div className="flex justify-between text-[9px] text-gray-500 px-1">
+        <div className="flex justify-between text-xs text-gray-500 px-1">
           <span>{historyLength}s ago</span>
           <span>Now</span>
         </div>
       </div>
       
       {/* Stats row */}
-      <div className="grid grid-cols-3 gap-2">
-        <div className="flex flex-col items-center p-1.5 bg-gray-800/50 rounded">
-          <span className="text-[9px] text-gray-500">AVG</span>
-          <span className="text-xs font-mono font-semibold text-gray-300">
+      <div className="grid grid-cols-3 gap-3">
+        <div className="flex flex-col items-center p-3 bg-gray-800/50 rounded-xl border border-gray-700/30">
+          <span className="text-xs text-gray-500 mb-1">AVG</span>
+          <span className="text-sm font-mono font-semibold text-gray-300">
             {(stats.avg * 100).toFixed(0)}%
           </span>
         </div>
-        <div className="flex flex-col items-center p-1.5 bg-gray-800/50 rounded">
-          <span className="text-[9px] text-gray-500">MIN</span>
-          <span className="text-xs font-mono font-semibold text-red-400">
+        <div className="flex flex-col items-center p-3 bg-gray-800/50 rounded-xl border border-gray-700/30">
+          <span className="text-xs text-gray-500 mb-1">MIN</span>
+          <span className="text-sm font-mono font-semibold text-red-400">
             {(stats.min * 100).toFixed(0)}%
           </span>
         </div>
-        <div className="flex flex-col items-center p-1.5 bg-gray-800/50 rounded">
-          <span className="text-[9px] text-gray-500">MAX</span>
-          <span className="text-xs font-mono font-semibold text-green-400">
+        <div className="flex flex-col items-center p-3 bg-gray-800/50 rounded-xl border border-gray-700/30">
+          <span className="text-xs text-gray-500 mb-1">MAX</span>
+          <span className="text-sm font-mono font-semibold text-green-400">
             {(stats.max * 100).toFixed(0)}%
           </span>
         </div>
       </div>
       
       {/* Error distribution */}
-      <div className="flex flex-col gap-1">
-        <span className="text-[9px] text-gray-500 uppercase tracking-wider">
+      <div className="flex flex-col gap-2">
+        <span className="text-xs text-gray-500 uppercase tracking-wider">
           Error Distribution
         </span>
-        <ErrorHistogram errors={errorHistoryRef.current} />
-        <div className="flex justify-between text-[8px] text-gray-600 px-1">
+        <ErrorHistogram errors={errorHistory} height={40} />
+        <div className="flex justify-between text-xs text-gray-600 px-1">
           <span>0%</span>
           <span>Error</span>
           <span>100%</span>

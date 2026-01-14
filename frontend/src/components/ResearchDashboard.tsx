@@ -15,9 +15,6 @@ import { DecoderLoadingOverlay } from './LoadingStates';
 import { useStore } from '../store';
 import { createPortal } from 'react-dom';
 
-// View mode toggle
-type ViewMode = 'research' | 'minimal' | 'legacy';
-
 // Status indicator badge
 const StatusBadge = memo(function StatusBadge({
   status,
@@ -86,11 +83,11 @@ const MainPerformanceDisplay = memo(function MainPerformanceDisplay() {
   }
   
   return (
-    <div className="flex flex-col items-center gap-4">
+    <div className="flex flex-col items-center gap-6">
       <PerformanceRing
         accuracy={accuracy}
         error={error}
-        size={160}
+        size={180}
         showLabels
       />
       
@@ -132,18 +129,18 @@ const CollapsiblePanel = memo(function CollapsiblePanel({
   const [isOpen, setIsOpen] = useState(defaultOpen);
   
   return (
-    <div className="bg-gray-900/80 backdrop-blur-sm rounded-xl border border-gray-700/50 overflow-hidden">
+    <div className="dashboard-card overflow-hidden">
       <button
-        className="w-full flex items-center justify-between p-3 hover:bg-gray-800/50 transition-colors"
+        className="w-full flex items-center justify-between p-4 hover:bg-gray-800/30 transition-colors"
         onClick={() => setIsOpen(!isOpen)}
       >
-        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+        <span className="text-sm font-semibold text-gray-300 uppercase tracking-wider">
           {title}
         </span>
         <motion.span
           animate={{ rotate: isOpen ? 180 : 0 }}
           transition={{ duration: 0.2 }}
-          className="text-gray-500"
+          className="text-gray-500 text-sm"
         >
           ▼
         </motion.span>
@@ -157,7 +154,7 @@ const CollapsiblePanel = memo(function CollapsiblePanel({
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.2 }}
           >
-            <div className="p-3 pt-0">{children}</div>
+            <div className="p-4 pt-0">{children}</div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -183,88 +180,112 @@ export const ResearchDashboard = memo(function ResearchDashboard() {
     <>
       <GlobalLoadingOverlay />
       
-      <div className="absolute inset-0 pointer-events-none z-50">
-        {/* Top Bar */}
-        <div className="absolute top-0 left-0 right-0 p-4 flex items-start justify-between">
-          <div className="flex flex-col gap-1 pointer-events-auto animate-slide-down">
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-400 via-blue-400 to-green-400 bg-clip-text text-transparent">
-              PHANTOM LOOP
-            </h1>
-            <p className="text-[10px] text-gray-500 tracking-wider uppercase">
-              BCI Decoder Analysis
-            </p>
+      {/* Full Dashboard Layout */}
+      <div className="absolute inset-0 flex flex-col bg-gray-950 z-50">
+        {/* Top Header Bar */}
+        <header className="dashboard-header flex items-center justify-between shrink-0 pointer-events-auto">
+          <div className="flex items-center gap-4">
+            <div className="flex flex-col">
+              <h1 className="text-xl font-bold bg-gradient-to-r from-purple-400 via-blue-400 to-green-400 bg-clip-text text-transparent">
+                PHANTOM LOOP
+              </h1>
+              <p className="text-[10px] text-gray-500 tracking-widest uppercase">
+                BCI Decoder Analysis Platform
+              </p>
+            </div>
           </div>
           
-          <div className="flex items-center gap-3 pointer-events-auto">
+          <div className="flex items-center gap-4">
             <StatusBadge
               status={systemStatus}
-              label={isConnected ? `${totalLatency.toFixed(0)}ms` : 'Offline'}
+              label={isConnected ? `${totalLatency.toFixed(0)}ms latency` : 'Offline'}
             />
             <ConnectionStatus />
           </div>
-        </div>
+        </header>
         
-        {/* Main content area - Center */}
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div className="pointer-events-auto">
-            <CenterOutArena />
-          </div>
-        </div>
-        
-        {/* Left Sidebar - Controls */}
-        <div className="absolute top-20 left-4 bottom-16 w-72 flex flex-col gap-3 pointer-events-auto overflow-y-auto overflow-x-hidden pr-2 scrollbar-thin">
-          <CollapsiblePanel title="Session" defaultOpen={true}>
-            <SessionManager />
-          </CollapsiblePanel>
+        {/* Main Content Area */}
+        <div className="flex flex-1 min-h-0 pointer-events-auto">
+          {/* Left Sidebar - Controls */}
+          <aside className="dashboard-sidebar w-80 shrink-0 overflow-y-auto scrollbar-hide">
+            <CollapsiblePanel title="Session Control" defaultOpen={true}>
+              <SessionManager />
+            </CollapsiblePanel>
+            
+            <CollapsiblePanel title="Decoder Selection" defaultOpen={true}>
+              <DecoderSelector />
+            </CollapsiblePanel>
+          </aside>
           
-          <CollapsiblePanel title="Decoder" defaultOpen={true}>
-            <DecoderSelector />
-          </CollapsiblePanel>
+          {/* Center - Main Visualization */}
+          <main className="flex-1 flex items-center justify-center p-6 min-w-0 bg-gray-900/30">
+            <div className="dashboard-card p-6">
+              <CenterOutArena />
+            </div>
+          </main>
+          
+          {/* Right Sidebar - Metrics */}
+          <aside className="dashboard-sidebar w-96 shrink-0 overflow-y-auto scrollbar-hide">
+            {/* Performance Overview Card */}
+            <div className="dashboard-card p-6">
+              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">
+                Performance Overview
+              </h3>
+              <div className="flex justify-center">
+                <MainPerformanceDisplay />
+              </div>
+            </div>
+            
+            {/* Quick Stats Card */}
+            <div className="dashboard-card p-5">
+              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">
+                Live Metrics
+              </h3>
+              <QuickStats />
+            </div>
+            
+            {/* Accuracy History Card */}
+            <div className="dashboard-card p-5">
+              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">
+                Accuracy History
+              </h3>
+              <AccuracyGauge
+                accuracy={currentAccuracy}
+                error={currentError}
+                historyLength={60}
+              />
+            </div>
+          </aside>
         </div>
         
-        {/* Right Sidebar - Metrics */}
-        <div className="absolute top-20 right-4 bottom-16 w-80 flex flex-col gap-3 pointer-events-auto overflow-y-auto overflow-x-hidden pl-2 scrollbar-thin">
-          {/* Main Performance Ring */}
-          <div className="flex justify-center py-4">
-            <MainPerformanceDisplay />
+        {/* Bottom Status Bar */}
+        <footer className="px-6 py-3 bg-gray-950/90 border-t border-gray-800/50 flex items-center justify-between shrink-0 relative">
+          {/* Legend */}
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-green-500 shadow-lg shadow-green-500/50" />
+              <span className="text-xs text-gray-400">Ground Truth</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-blue-500 shadow-lg shadow-blue-500/50" />
+              <span className="text-xs text-gray-400">Decoded</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full border border-purple-500" />
+              <span className="text-xs text-gray-400">Target</span>
+            </div>
           </div>
           
-          {/* Quick Stats */}
-          <QuickStats />
+          {/* Center - Desync Alert */}
+          <div className="absolute left-1/2 -translate-x-1/2">
+            <DesyncAlert />
+          </div>
           
-          {/* Accuracy History */}
-          <AccuracyGauge
-            accuracy={currentAccuracy}
-            error={currentError}
-            historyLength={60}
-          />
-        </div>
-        
-        {/* Bottom Center - Desync Alert */}
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 pointer-events-auto">
-          <DesyncAlert />
-        </div>
-        
-        {/* Legend */}
-        <div className="absolute bottom-4 left-4 flex items-center gap-4 pointer-events-none">
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-green-500 shadow-lg shadow-green-500/50" />
-            <span className="text-[10px] text-gray-400">Ground Truth</span>
+          {/* Keyboard hints */}
+          <div className="text-xs text-gray-500">
+            <span>R: Reset • Space: Pause • V: View Mode</span>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-blue-500 shadow-lg shadow-blue-500/50" />
-            <span className="text-[10px] text-gray-400">Decoded</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full border border-purple-500" />
-            <span className="text-[10px] text-gray-400">Target</span>
-          </div>
-        </div>
-        
-        {/* Keyboard hints */}
-        <div className="absolute bottom-4 right-4 text-[10px] text-gray-600 pointer-events-none">
-          <span className="opacity-50">R: Reset • Space: Pause</span>
-        </div>
+        </footer>
       </div>
     </>
   );
