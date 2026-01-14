@@ -9,6 +9,7 @@ export const WelcomeScreen = memo(function WelcomeScreen() {
   const connectWebSocket = useStore((state) => state.connectWebSocket);
   const connectionError = useStore((state) => state.connectionError);
   
+  const [serverUrl, setServerUrl] = useState(SERVER_CONFIG.BASE_URL);
   const [sessionInput, setSessionInput] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
@@ -27,7 +28,8 @@ export const WelcomeScreen = memo(function WelcomeScreen() {
     setIsCreating(true);
     setError(null);
     try {
-      const response = await fetch(`${SERVER_CONFIG.BASE_URL.replace('wss://', 'https://').replace('ws://', 'http://')}/api/sessions/create`, {
+      const apiUrl = serverUrl.replace('wss://', 'https://').replace('ws://', 'http://');
+      const response = await fetch(`${apiUrl}/api/sessions/create`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });
@@ -45,7 +47,7 @@ export const WelcomeScreen = memo(function WelcomeScreen() {
     } finally {
       setIsCreating(false);
     }
-  }, [connectWebSocket]);
+  }, [connectWebSocket, serverUrl]);
 
   const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && sessionInput.trim()) {
@@ -106,6 +108,24 @@ export const WelcomeScreen = memo(function WelcomeScreen() {
           </div>
 
           <div className="space-y-4">
+            {/* Server URL configuration */}
+            <div className="space-y-2">
+              <label className="text-sm text-gray-400 block">PhantomLink Server URL</label>
+              <input
+                type="text"
+                value={serverUrl}
+                onChange={(e) => setServerUrl(e.target.value)}
+                placeholder="ws://localhost:8000"
+                className="w-full bg-gray-800/80 text-white px-4 py-3 text-sm 
+                  border border-gray-600/50 focus:border-biolink focus:outline-none 
+                  focus:ring-1 focus:ring-biolink/30 placeholder:text-gray-500 
+                  transition-all duration-200 font-mono"
+              />
+              <p className="text-xs text-gray-500">
+                Enter your server URL or use the default
+              </p>
+            </div>
+
             {/* Join existing session */}
             <div className="space-y-2">
               <label className="text-sm text-gray-400 block">Join existing session</label>
