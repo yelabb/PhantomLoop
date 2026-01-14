@@ -13,6 +13,7 @@ import { PlaybackControls } from './PlaybackControls';
 import { DecoderSelector } from './DecoderSelector';
 import { DecoderLoadingOverlay } from './LoadingStates';
 import { DraggablePanel } from './DraggablePanel';
+import { ResizablePanel } from './ResizablePanel';
 import { useStore } from '../store';
 import { createPortal } from 'react-dom';
 
@@ -242,7 +243,7 @@ export const ResearchDashboard = memo(function ResearchDashboard() {
         {/* Main Content Area */}
         <div className="flex flex-1 min-h-0">
           {/* Left Sidebar - Controls */}
-          <aside className="dashboard-sidebar w-80 shrink-0 overflow-y-auto">
+          <ResizablePanel side="left" defaultWidth={320} minWidth={250} maxWidth={500}>
             {leftPanelOrder.map((panelId) => (
               <DraggablePanel
                 key={panelId}
@@ -270,7 +271,7 @@ export const ResearchDashboard = memo(function ResearchDashboard() {
           </main>
           
           {/* Right Sidebar - Metrics */}
-          <aside className="dashboard-sidebar w-96 shrink-0 overflow-y-auto">
+          <ResizablePanel side="right" defaultWidth={384} minWidth={300} maxWidth={600}>
             {rightPanelOrder.map((panelId) => (
               <DraggablePanel
                 key={panelId}
@@ -285,7 +286,7 @@ export const ResearchDashboard = memo(function ResearchDashboard() {
                 {renderPanelContent(panelId)}
               </DraggablePanel>
             ))}
-          </aside>
+          </ResizablePanel>
         </div>
         
         {/* Bottom Status Bar */}
