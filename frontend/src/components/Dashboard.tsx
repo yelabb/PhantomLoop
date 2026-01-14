@@ -69,8 +69,8 @@ export const Dashboard = memo(function Dashboard() {
           </div>
         </div>
 
-        {/* Left Sidebar */}
-        <div className="absolute top-24 left-4 flex flex-col gap-3 pointer-events-none">
+        {/* Left Sidebar - Scrollable */}
+        <div className="absolute top-24 left-4 bottom-16 flex flex-col gap-3 pointer-events-none overflow-y-auto overflow-x-hidden pr-2 scrollbar-thin">
           <SessionManager />
           <DecoderSelector />
           <VisualizationControls />

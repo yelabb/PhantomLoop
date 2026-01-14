@@ -41,6 +41,34 @@ export const SessionManager = memo(function SessionManager() {
     }
   }, [connectWebSocket]);
 
+  const sessionCode = useStore((state) => state.sessionCode);
+
+  // When connected, show minimal session info with disconnect
+  if (isConnected) {
+    return (
+      <div className="glass-panel p-4 rounded-xl w-80 pointer-events-auto animate-slide-up">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+            <h3 className="text-sm font-semibold text-white">Session</h3>
+          </div>
+          <span className="text-xs font-mono text-phantom bg-phantom/10 px-2 py-1 rounded">
+            {sessionCode}
+          </span>
+        </div>
+        
+        <button
+          onClick={disconnectWebSocket}
+          className="w-full bg-red-600/90 text-white px-3 py-2.5 rounded-lg text-sm font-medium 
+            hover:bg-red-500 transition-all duration-200 border border-red-500/50"
+        >
+          Disconnect
+        </button>
+      </div>
+    );
+  }
+
+  // When not connected, show full session form (though WelcomeScreen handles this now)
   return (
     <div className="glass-panel p-4 rounded-xl w-80 pointer-events-auto animate-slide-up">
       <div className="flex items-center gap-2 mb-3">
@@ -57,57 +85,44 @@ export const SessionManager = memo(function SessionManager() {
           className="bg-gray-800/80 text-white px-3 py-2.5 rounded-lg text-sm border border-gray-600/50 
             focus:border-phantom focus:outline-none focus:ring-1 focus:ring-phantom/50
             placeholder:text-gray-500 transition-all duration-200"
-          disabled={isConnected}
         />
 
         <div className="flex gap-2">
-          {!isConnected ? (
-            <>
-              <button
-                onClick={handleConnect}
-                disabled={!sessionInput.trim() || isConnecting}
-                className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-phantom to-yellow-500 
-                  text-black px-3 py-2.5 rounded-lg text-sm font-semibold 
-                  hover:from-yellow-400 hover:to-yellow-500 
-                  disabled:opacity-50 disabled:cursor-not-allowed 
-                  transition-all duration-200 shadow-lg shadow-phantom/20"
-              >
-                {isConnecting ? (
-                  <>
-                    <Spinner size="xs" color="phantom" />
-                    Connecting...
-                  </>
-                ) : (
-                  'Connect'
-                )}
-              </button>
-              <button
-                onClick={handleCreateSession}
-                disabled={isCreating}
-                className="flex-1 flex items-center justify-center gap-2 bg-gray-700/80 text-white 
-                  px-3 py-2.5 rounded-lg text-sm font-medium 
-                  hover:bg-gray-600 disabled:opacity-50 
-                  transition-all duration-200 border border-gray-600/50"
-              >
-                {isCreating ? (
-                  <>
-                    <Spinner size="xs" color="white" />
-                    Creating...
-                  </>
-                ) : (
-                  'New Session'
-                )}
-              </button>
-            </>
-          ) : (
-            <button
-              onClick={disconnectWebSocket}
-              className="w-full bg-red-600/90 text-white px-3 py-2.5 rounded-lg text-sm font-medium 
-                hover:bg-red-500 transition-all duration-200 border border-red-500/50"
-            >
-              Disconnect
-            </button>
-          )}
+          <button
+            onClick={handleConnect}
+            disabled={!sessionInput.trim() || isConnecting}
+            className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-phantom to-yellow-500 
+              text-black px-3 py-2.5 rounded-lg text-sm font-semibold 
+              hover:from-yellow-400 hover:to-yellow-500 
+              disabled:opacity-50 disabled:cursor-not-allowed 
+              transition-all duration-200 shadow-lg shadow-phantom/20"
+          >
+            {isConnecting ? (
+              <>
+                <Spinner size="xs" color="phantom" />
+                Connecting...
+              </>
+            ) : (
+              'Connect'
+            )}
+          </button>
+          <button
+            onClick={handleCreateSession}
+            disabled={isCreating}
+            className="flex-1 flex items-center justify-center gap-2 bg-gray-700/80 text-white 
+              px-3 py-2.5 rounded-lg text-sm font-medium 
+              hover:bg-gray-600 disabled:opacity-50 
+              transition-all duration-200 border border-gray-600/50"
+          >
+            {isCreating ? (
+              <>
+                <Spinner size="xs" color="white" />
+                Creating...
+              </>
+            ) : (
+              'New Session'
+            )}
+          </button>
         </div>
       </div>
     </div>
