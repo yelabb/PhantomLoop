@@ -80,11 +80,11 @@ export const WelcomeScreen = memo(function WelcomeScreen() {
       <div className="relative z-10 flex flex-col items-center gap-8 p-8 max-w-lg mx-4">
         {/* Logo and title */}
         <div className="text-center animate-fade-in">
-          <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-phantom via-loopback to-biolink bg-clip-text text-transparent mb-2">
-            PHANTOM LOOP
+          <h1 className="text-5xl md:text-6xl font-bold text-white mb-2">
+        LOOP
           </h1>
           <p className="text-gray-400 tracking-[0.3em] text-sm uppercase">
-            Neural Gauntlet Arena
+        Neural Gauntlet Arena
           </p>
         </div>
 
