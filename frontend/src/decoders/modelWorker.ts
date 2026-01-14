@@ -162,6 +162,31 @@ async function createModel(type: string): Promise<{ success: boolean; params?: n
 }
 
 /**
+ * Load a model from URL (pre-trained)
+ */
+async function loadModelFromUrl(id: string, url: string): Promise<{ success: boolean; params?: number; inputShape?: number[]; error?: string }> {
+  try {
+    console.log(`[Worker] Loading model from: ${url}`);
+    const model = await tf.loadLayersModel(url);
+    
+    model.compile({
+      optimizer: tf.train.adam(0.001),
+      loss: 'meanSquaredError',
+    });
+
+    const params = model.countParams();
+    const inputShape = model.inputs[0].shape.slice(1).map(d => d || 0);
+    models.set(id, model);
+
+    console.log(`[Worker] ✓ Loaded model: ${id} (${params.toLocaleString()} params)`);
+    return { success: true, params, inputShape };
+  } catch (error) {
+    console.error(`[Worker] Failed to load model from ${url}:`, error);
+    return { success: false, error: String(error) };
+  }
+}
+
+/**
  * Run inference on a model
  */
 function runInference(type: string, input: number[] | number[][]): { success: boolean; output?: number[]; error?: string } {
@@ -206,6 +231,12 @@ self.onmessage = async (event: MessageEvent) => {
     case 'create': {
       const createResult = await createModel(payload.type);
       self.postMessage({ id, action: 'create', result: createResult });
+      break;
+    }
+
+    case 'load': {
+      const loadResult = await loadModelFromUrl(payload.id, payload.url);
+      self.postMessage({ id, action: 'load', result: loadResult });
       break;
     }
 

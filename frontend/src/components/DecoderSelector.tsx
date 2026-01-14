@@ -4,7 +4,8 @@ import { memo, useEffect, useCallback, useState } from 'react';
 import { useStore } from '../store';
 import { allDecoders, getBackendInfo, initModel } from '../decoders';
 import { Spinner } from './LoadingStates';
-import type { Decoder, TFJSModelType } from '../types/decoders';
+import { AddDecoderModal } from './AddDecoderModal';
+import type { Decoder } from '../types/decoders';
 
 // Separate component for latency display to prevent full re-renders
 const LatencyDisplay = memo(function LatencyDisplay() {
@@ -46,6 +47,7 @@ export const DecoderSelector = memo(function DecoderSelector() {
   
   const [isLoading, setIsLoading] = useState(false);
   const [loadingName, setLoadingName] = useState('');
+  const [showAddModal, setShowAddModal] = useState(false);
 
   // Register all decoders on mount
   useEffect(() => {
@@ -60,17 +62,25 @@ export const DecoderSelector = memo(function DecoderSelector() {
       return;
     }
 
-    // For TFJS decoders, preload the model with loading state
-    if (decoder.type === 'tfjs' && decoder.tfjsModelType) {
+    // For TFJS decoders (builtin, URL, or local), preload the model
+    const needsLoading = decoder.type === 'tfjs' && (
+      decoder.tfjsModelType || 
+      decoder.modelUrl || 
+      decoder.source?.type === 'builtin' ||
+      decoder.source?.type === 'url' ||
+      decoder.source?.type === 'local'
+    );
+
+    if (needsLoading) {
       // Set loading state BEFORE async work
       setIsLoading(true);
       setLoadingName(decoder.name);
       setDecoderLoading(true, decoder.name);
       
       try {
-        // Use Web Worker to create model - this runs in a separate thread
+        // Use Web Worker to create/load model - this runs in a separate thread
         // so the main thread stays responsive and the loading UI shows
-        await initModel(decoder.tfjsModelType as TFJSModelType);
+        await initModel(decoder);
         
         // Small delay for visual feedback after loading completes
         await new Promise(resolve => setTimeout(resolve, 200));
@@ -88,8 +98,13 @@ export const DecoderSelector = memo(function DecoderSelector() {
     }
   }, [availableDecoders, setActiveDecoder, setDecoderLoading]);
 
-  // Group decoders by type
-  const tfjsDecoders = availableDecoders.filter(d => d.type === 'tfjs');
+  // Group decoders by type and source
+  const builtinDecoders = availableDecoders.filter(d => 
+    d.type === 'tfjs' && (!d.source || d.source.type === 'builtin')
+  );
+  const customDecoders = availableDecoders.filter(d => 
+    d.source?.type === 'url' || d.source?.type === 'local'
+  );
   const jsDecoders = availableDecoders.filter(d => d.type === 'javascript');
 
   return (
@@ -102,45 +117,74 @@ export const DecoderSelector = memo(function DecoderSelector() {
         <BackendIndicator />
       </div>
       
-      <div className="relative">
-        <select
-          value={activeDecoder?.id || ''}
-          onChange={handleDecoderChange}
+      <div className="flex gap-2">
+        <div className="relative flex-1">
+          <select
+            value={activeDecoder?.id || ''}
+            onChange={handleDecoderChange}
+            disabled={isLoading}
+            className={`w-full bg-gray-800/80 text-white px-3 py-2.5 rounded-lg text-sm border border-gray-600/50 
+              focus:border-loopback focus:outline-none focus:ring-1 focus:ring-loopback/50
+              cursor-pointer transition-all duration-200
+              ${isLoading ? 'opacity-50 cursor-wait' : 'hover:border-gray-500'}`}
+          >
+            <option value="">None (Phantom only)</option>
+            
+            {builtinDecoders.length > 0 && (
+              <optgroup label="🧠 Neural Networks">
+                {builtinDecoders.map(decoder => (
+                  <option key={decoder.id} value={decoder.id}>
+                    {decoder.name}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+
+            {customDecoders.length > 0 && (
+              <optgroup label="📦 Custom Models">
+                {customDecoders.map(decoder => (
+                  <option key={decoder.id} value={decoder.id}>
+                    {decoder.name}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+            
+            {jsDecoders.length > 0 && (
+              <optgroup label="📜 Baselines">
+                {jsDecoders.map(decoder => (
+                  <option key={decoder.id} value={decoder.id}>
+                    {decoder.name}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+          </select>
+          
+          {isLoading && (
+            <div className="absolute right-3 top-1/2 -translate-y-1/2">
+              <Spinner size="sm" color="loopback" />
+            </div>
+          )}
+        </div>
+
+        {/* Add Custom Decoder Button */}
+        <button
+          onClick={() => setShowAddModal(true)}
           disabled={isLoading}
-          className={`w-full bg-gray-800/80 text-white px-3 py-2.5 rounded-lg text-sm border border-gray-600/50 
-            focus:border-loopback focus:outline-none focus:ring-1 focus:ring-loopback/50
-            cursor-pointer transition-all duration-200
-            ${isLoading ? 'opacity-50 cursor-wait' : 'hover:border-gray-500'}`}
+          className="px-3 py-2.5 bg-gray-800/80 text-gray-400 hover:text-loopback rounded-lg text-sm border border-gray-600/50 
+            hover:border-loopback/50 transition-all duration-200 disabled:opacity-50"
+          title="Add custom decoder from URL"
         >
-          <option value="">None (Phantom only)</option>
-          
-          {tfjsDecoders.length > 0 && (
-            <optgroup label="🧠 Neural Networks">
-              {tfjsDecoders.map(decoder => (
-                <option key={decoder.id} value={decoder.id}>
-                  {decoder.name}
-                </option>
-              ))}
-            </optgroup>
-          )}
-          
-          {jsDecoders.length > 0 && (
-            <optgroup label="📜 Baselines">
-              {jsDecoders.map(decoder => (
-                <option key={decoder.id} value={decoder.id}>
-                  {decoder.name}
-                </option>
-              ))}
-            </optgroup>
-          )}
-        </select>
-        
-        {isLoading && (
-          <div className="absolute right-3 top-1/2 -translate-y-1/2">
-            <Spinner size="sm" color="loopback" />
-          </div>
-        )}
+          +
+        </button>
       </div>
+
+      {/* Add Decoder Modal */}
+      <AddDecoderModal 
+        isOpen={showAddModal} 
+        onClose={() => setShowAddModal(false)} 
+      />
 
       {/* Loading state */}
       {isLoading && (
@@ -149,7 +193,7 @@ export const DecoderSelector = memo(function DecoderSelector() {
             <Spinner size="xs" color="loopback" />
             <span className="text-xs text-loopback">Loading {loadingName}...</span>
           </div>
-          <p className="text-xs text-gray-500 mt-1">Building neural network...</p>
+          <p className="text-xs text-gray-500 mt-1">Initializing model...</p>
         </div>
       )}
 
@@ -158,11 +202,18 @@ export const DecoderSelector = memo(function DecoderSelector() {
         <div className="mt-3 p-3 rounded-lg bg-gray-800/50 animate-fade-in">
           <div className="flex items-center justify-between mb-2">
             <span className="font-medium text-sm text-white">{activeDecoder.name}</span>
-            {activeDecoder.type === 'tfjs' && (
-              <span className="text-xs px-2 py-0.5 rounded-full bg-loopback/20 text-loopback">
-                Neural
-              </span>
-            )}
+            <div className="flex gap-1">
+              {activeDecoder.source?.type && (
+                <span className="text-xs px-2 py-0.5 rounded-full bg-gray-700/50 text-gray-400">
+                  {activeDecoder.source.type}
+                </span>
+              )}
+              {activeDecoder.type === 'tfjs' && (
+                <span className="text-xs px-2 py-0.5 rounded-full bg-loopback/20 text-loopback">
+                  Neural
+                </span>
+              )}
+            </div>
           </div>
           
           <p className="text-xs text-gray-400 leading-relaxed">{activeDecoder.description}</p>

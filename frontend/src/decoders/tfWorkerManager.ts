@@ -100,18 +100,19 @@ class TFWorkerManager {
 
       this.worker.postMessage({ id, action, payload });
 
-      // Timeout for individual requests
+      // Timeout for individual requests (120s for model creation, 10s for inference)
+      const timeout = action === 'create' || action === 'load' ? 120000 : 10000;
       setTimeout(() => {
         if (this.pendingRequests.has(id)) {
           this.pendingRequests.delete(id);
           reject(new Error(`Worker request timeout for action: ${action}`));
         }
-      }, 30000);
+      }, timeout);
     });
   }
 
   /**
-   * Create/load a model in the worker
+   * Create a built-in model in the worker
    */
   async createModel(type: string): Promise<{ params: number }> {
     if (!this.ready) await this.init();
@@ -134,6 +135,33 @@ class TFWorkerManager {
 
     this.loadedModels.add(type);
     console.log(`[TFJS Worker] ✓ ${type} model created (${result.params?.toLocaleString()} params)`);
+    return { params: result.params || 0 };
+  }
+
+  /**
+   * Load a model from URL (pre-trained model)
+   */
+  async loadModelFromUrl(id: string, url: string): Promise<{ params: number }> {
+    if (!this.ready) await this.init();
+
+    if (this.loadedModels.has(id)) {
+      console.log(`[TFJS Worker] Model ${id} already loaded`);
+      return { params: 0 };
+    }
+
+    console.log(`[TFJS Worker] Loading model from ${url}...`);
+    const result = await this.sendMessage('load', { id, url }) as {
+      success: boolean;
+      params?: number;
+      error?: string;
+    };
+
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to load model from URL');
+    }
+
+    this.loadedModels.add(id);
+    console.log(`[TFJS Worker] ✓ Model loaded from URL (${result.params?.toLocaleString()} params)`);
     return { params: result.params || 0 };
   }
 
