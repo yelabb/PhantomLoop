@@ -1,0 +1,21 @@
+// Loop-Back Cursor (Blue - Decoder Output)
+
+import { Cursor } from './Cursor';
+import { COLORS, VISUALIZATION } from '../utils/constants';
+
+interface LoopBackCursorProps {
+  x: number;
+  y: number;
+}
+
+export function LoopBackCursor({ x, y }: LoopBackCursorProps) {
+  return (
+    <Cursor 
+      x={x} 
+      y={y} 
+      color={COLORS.LOOPBACK}
+      size={VISUALIZATION.LOOPBACK_SIZE}
+      emissiveIntensity={0.7}
+    />
+  );
+}
