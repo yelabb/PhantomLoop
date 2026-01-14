@@ -12,11 +12,11 @@ interface Point {
 }
 
 // Constants
-const ARENA_SIZE = 480;
+const ARENA_SIZE = 640;
 const CENTER = ARENA_SIZE / 2;
-const TARGET_RADIUS = 210;
-const CURSOR_SIZE = 18;
-const TARGET_SIZE = 28;
+const TARGET_RADIUS = 260;
+const CURSOR_SIZE = 22;
+const TARGET_SIZE = 32;
 
 // Target positions (8 directions like Neuralink's center-out task)
 const TARGET_ANGLES = [0, 45, 90, 135, 180, 225, 270, 315];
@@ -85,18 +85,18 @@ const NeuralBackground = memo(function NeuralBackground({
       const totalSpikes = spikes.reduce((sum, s) => sum + s, 0);
       const avgSpikes = totalSpikes / spikes.length;
       
-      // Create particles based on spike activity (throttled)
-      if (avgSpikes > 0 && particlesRef.current.length < 150) {
+      // Create particles based on spike activity (more particles for visibility)
+      if (avgSpikes > 0 && particlesRef.current.length < 250) {
         // Sample a subset of channels with highest activity
         const activeChannels = spikes
           .map((count, idx) => ({ count, idx }))
           .filter(c => c.count > 0)
           .sort((a, b) => b.count - a.count)
-          .slice(0, 10); // Top 10 active channels
+          .slice(0, 15); // Top 15 active channels
         
         activeChannels.forEach(({ count, idx }) => {
-          // Spawn 1-2 particles per active channel
-          const particleCount = Math.min(Math.ceil(count / 3), 2);
+          // Spawn more particles per active channel for better visibility
+          const particleCount = Math.min(Math.ceil(count / 2), 3);
           for (let i = 0; i < particleCount; i++) {
             const angle = Math.random() * Math.PI * 2;
             const radius = TARGET_RADIUS + Math.random() * 40;
@@ -110,8 +110,8 @@ const NeuralBackground = memo(function NeuralBackground({
               vx: (Math.random() - 0.5) * 0.5,
               vy: (Math.random() - 0.5) * 0.5,
               life: 0,
-              maxLife: 60 + Math.random() * 40,
-              intensity: Math.min(count / 8, 1),
+              maxLife: 70 + Math.random() * 50,
+              intensity: Math.min(count / 5, 1.2),
               channel: idx,
             });
           }
@@ -129,20 +129,34 @@ const NeuralBackground = memo(function NeuralBackground({
         p.x += p.vx;
         p.y += p.vy;
         
-        // Fade out
-        const alpha = (1 - p.life / p.maxLife) * p.intensity * 0.7;
+        // Fade out with stronger presence
+        const alpha = (1 - p.life / p.maxLife) * p.intensity;
         
         if (alpha <= 0) return false;
         
-        // Render particle
-        const gradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, 8);
-        gradient.addColorStop(0, `rgba(139, 92, 246, ${alpha})`);
-        gradient.addColorStop(0.5, `rgba(99, 102, 241, ${alpha * 0.5})`);
-        gradient.addColorStop(1, `rgba(59, 130, 246, 0)`);
+        // Render particle with bright glow
+        // Outer glow (large, subtle)
+        const outerGlow = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, 24);
+        outerGlow.addColorStop(0, `rgba(168, 85, 247, ${alpha * 0.4})`);
+        outerGlow.addColorStop(0.3, `rgba(139, 92, 246, ${alpha * 0.3})`);
+        outerGlow.addColorStop(0.6, `rgba(99, 102, 241, ${alpha * 0.15})`);
+        outerGlow.addColorStop(1, 'rgba(59, 130, 246, 0)');
         
-        ctx.fillStyle = gradient;
+        ctx.fillStyle = outerGlow;
         ctx.beginPath();
-        ctx.arc(p.x, p.y, 6 + p.intensity * 4, 0, Math.PI * 2);
+        ctx.arc(p.x, p.y, 20 + p.intensity * 8, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Inner bright core
+        const coreGradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, 6);
+        coreGradient.addColorStop(0, `rgba(255, 255, 255, ${alpha * 0.9})`);
+        coreGradient.addColorStop(0.3, `rgba(196, 181, 253, ${alpha * 0.8})`);
+        coreGradient.addColorStop(0.7, `rgba(139, 92, 246, ${alpha * 0.5})`);
+        coreGradient.addColorStop(1, `rgba(99, 102, 241, 0)`);
+        
+        ctx.fillStyle = coreGradient;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 4 + p.intensity * 3, 0, Math.PI * 2);
         ctx.fill();
         
         return true;
@@ -395,6 +409,7 @@ export const CenterOutArena = memo(function CenterOutArena() {
         height: ARENA_SIZE,
         background: 'radial-gradient(circle at center, #1a1a2e 0%, #0f0f1a 100%)',
         boxShadow: 'inset 0 0 60px rgba(0,0,0,0.5), 0 0 40px rgba(0,0,0,0.3)',
+        filter: 'contrast(1.1) brightness(1.05)',
       }}
     >
       {/* Neural spike particle background */}
