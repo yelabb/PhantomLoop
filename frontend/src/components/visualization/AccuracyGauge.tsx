@@ -1,7 +1,7 @@
 // Accuracy Gauge - Live-updating sparkline and histogram for decoder performance
 // Shows rolling accuracy over time and error distribution
 
-import { memo, useMemo, useEffect, useState } from 'react';
+import { memo, useMemo, useReducer, useRef } from 'react';
 import { motion } from 'framer-motion';
 
 interface AccuracyGaugeProps {
@@ -174,15 +174,31 @@ export const AccuracyGauge = memo(function AccuracyGauge({
   error,
   historyLength = 60,
 }: AccuracyGaugeProps) {
-  // History buffers - using state for React Compiler compatibility
-  const [accuracyHistory, setAccuracyHistory] = useState<number[]>([]);
-  const [errorHistory, setErrorHistory] = useState<number[]>([]);
+  // History buffers - using refs with inline updates to avoid effect setState issues
+  const accuracyHistoryRef = useRef<number[]>([]);
+  const errorHistoryRef = useRef<number[]>([]);
   
-  // Update histories
-  useEffect(() => {
-    setAccuracyHistory(prev => [...prev.slice(-(historyLength - 1)), accuracy]);
-    setErrorHistory(prev => [...prev.slice(-(historyLength - 1)), error]);
-  }, [accuracy, error, historyLength]);
+  // Update histories inline (before render)
+  // Only add if value changed
+  const lastAcc = accuracyHistoryRef.current[accuracyHistoryRef.current.length - 1];
+  if (lastAcc !== accuracy) {
+    accuracyHistoryRef.current = [
+      ...accuracyHistoryRef.current.slice(-(historyLength - 1)),
+      accuracy,
+    ];
+  }
+  
+  const lastErr = errorHistoryRef.current[errorHistoryRef.current.length - 1];
+  if (lastErr !== error) {
+    errorHistoryRef.current = [
+      ...errorHistoryRef.current.slice(-(historyLength - 1)),
+      error,
+    ];
+  }
+  
+  // Copy to local vars for render
+  const accuracyHistory = accuracyHistoryRef.current;
+  const errorHistory = errorHistoryRef.current;
   
   // Statistics
   const stats = useMemo(() => {
