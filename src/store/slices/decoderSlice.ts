@@ -2,6 +2,8 @@
 
 import type { StateCreator } from 'zustand';
 import type { Decoder, DecoderOutput } from '../../types/decoders';
+import { clearHistory as clearTFJSHistory } from '../../decoders/tfjsInference';
+import { clearDecoderCache } from '../../decoders/executeDecoder';
 
 export interface DecoderSlice {
   activeDecoder: Decoder | null;
@@ -14,6 +16,7 @@ export interface DecoderSlice {
   updateDecoderOutput: (output: DecoderOutput) => void;
   registerDecoder: (decoder: Decoder) => void;
   setDecoderLoading: (isLoading: boolean, message?: string) => void;
+  resetDecoder: () => void;
 }
 
 export const createDecoderSlice: StateCreator<
@@ -59,5 +62,23 @@ export const createDecoderSlice: StateCreator<
       isDecoderLoading: isLoading,
       decoderLoadingMessage: message,
     });
+  },
+
+  resetDecoder: () => {
+    console.log('[PhantomLoop] 🧹 Resetting decoder state');
+    console.log('[PhantomLoop] Previous activeDecoder:', get().activeDecoder?.name);
+    
+    // Clear all decoder-related caches
+    clearTFJSHistory();
+    clearDecoderCache();
+    
+    set({ 
+      activeDecoder: null,
+      decoderOutput: null,
+      isDecoderLoading: false,
+      decoderLoadingMessage: '',
+    });
+    
+    console.log('[PhantomLoop] ✅ Decoder state reset complete');
   },
 });

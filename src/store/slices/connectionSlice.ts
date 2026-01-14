@@ -2,6 +2,7 @@
 
 import type { StateCreator } from 'zustand';
 import { SERVER_CONFIG } from '../../utils/constants';
+import type { StoreState } from '..';
 
 export interface ConnectionSlice {
   websocket: WebSocket | null;
@@ -15,7 +16,7 @@ export interface ConnectionSlice {
 }
 
 export const createConnectionSlice: StateCreator<
-  ConnectionSlice,
+  StoreState,
   [],
   [],
   ConnectionSlice
@@ -59,11 +60,19 @@ export const createConnectionSlice: StateCreator<
       };
 
       ws.onclose = () => {
-        console.log('[PhantomLoop] Connection closed');
+        console.log('[PhantomLoop] 🔌 Connection closed - clearing all state');
         set({ 
           isConnected: false, 
-          websocket: null 
+          websocket: null,
+          sessionCode: null
         });
+        
+        // Clear stream and decoder state when connection closes
+        const state = get();
+        console.log('[PhantomLoop] Calling clearStream and resetDecoder from onclose');
+        state.clearStream?.();
+        state.resetDecoder?.();
+        console.log('[PhantomLoop] ✅ State cleanup complete');
       };
 
       set({ websocket: ws });
@@ -79,12 +88,20 @@ export const createConnectionSlice: StateCreator<
   disconnectWebSocket: () => {
     const { websocket } = get();
     if (websocket) {
+      console.log('[PhantomLoop] 🔌 Manually disconnecting - clearing all state');
       websocket.close();
       set({ 
         websocket: null, 
         isConnected: false, 
         sessionCode: null 
       });
+      
+      // Clear stream and decoder state when disconnecting
+      const state = get();
+      console.log('[PhantomLoop] Calling clearStream and resetDecoder from disconnectWebSocket');
+      state.clearStream?.();
+      state.resetDecoder?.();
+      console.log('[PhantomLoop] ✅ State cleanup complete');
     }
   },
 
