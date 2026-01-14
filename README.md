@@ -1,3 +1,6 @@
+<img width="300" alt="logo" src="https://github.com/user-attachments/assets/87525c02-0301-4421-850f-06f96584b9df" />
+
+
 # PHANTOM LOOP
 
 **The Neural Gauntlet: Closed-Loop Validation Infrastructure**
@@ -383,4 +386,5 @@ MIT License. See [LICENSE](LICENSE) for details.
 **Built with ❤️ for the BCI community**
 
 *"Close the loop. Collapse the triangle. Master the gauntlet."*
+
 
