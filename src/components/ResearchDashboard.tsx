@@ -12,8 +12,12 @@ import { ConnectionStatus } from './ConnectionStatus';
 import { PlaybackControls } from './PlaybackControls';
 import { DecoderSelector } from './DecoderSelector';
 import { DecoderLoadingOverlay } from './LoadingStates';
+import { DraggablePanel } from './DraggablePanel';
 import { useStore } from '../store';
 import { createPortal } from 'react-dom';
+
+// Panel types
+type PanelId = 'decoder' | 'accuracy' | 'waterfall' | 'grid' | 'stats';
 
 // Status indicator badge
 const StatusBadge = memo(function StatusBadge({
@@ -58,48 +62,6 @@ const GlobalLoadingOverlay = memo(function GlobalLoadingOverlay() {
   );
 });
 
-// Collapsible panel
-const CollapsiblePanel = memo(function CollapsiblePanel({
-  title,
-  children,
-  defaultOpen = true,
-}: {
-  title: string;
-  children: React.ReactNode;
-  defaultOpen?: boolean;
-}) {
-  const [isOpen, setIsOpen] = useState(defaultOpen);
-  
-  return (
-    <div className="dashboard-card overflow-hidden">
-      <button
-        className="w-full flex items-center justify-between p-4 hover:bg-gray-800/30 transition-colors"
-        onClick={() => setIsOpen(!isOpen)}
-      >
-        <span className="text-sm font-semibold text-gray-300 uppercase tracking-wider">
-          {title}
-        </span>
-        <span className="text-gray-500 text-sm">
-          {isOpen ? '−' : '+'}
-        </span>
-      </button>
-      
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
-          >
-            <div className="p-4 pt-0">{children}</div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-});
-
 export const ResearchDashboard = memo(function ResearchDashboard() {
   const isConnected = useStore((state) => state.isConnected);
   const totalLatency = useStore((state) => state.totalLatency);
@@ -108,6 +70,12 @@ export const ResearchDashboard = memo(function ResearchDashboard() {
   const currentPacket = useStore((state) => state.currentPacket);
   const decoderOutput = useStore((state) => state.decoderOutput);
   const updateAccuracy = useStore((state) => state.updateAccuracy);
+  
+  // Panel ordering state
+  const [leftPanelOrder, setLeftPanelOrder] = useState<PanelId[]>(['decoder']);
+  const [rightPanelOrder, setRightPanelOrder] = useState<PanelId[]>(['accuracy', 'waterfall', 'grid', 'stats']);
+  const [draggedPanel, setDraggedPanel] = useState<PanelId | null>(null);
+  const [dragSource, setDragSource] = useState<'left' | 'right' | null>(null);
   
   // Calculate and update accuracy continuously
   useEffect(() => {
@@ -137,6 +105,103 @@ export const ResearchDashboard = memo(function ResearchDashboard() {
     
     updateAccuracy(accuracy, normalizedError, true);
   }, [currentPacket?.data?.kinematics, decoderOutput, updateAccuracy]);
+  
+  // Drag and drop handlers
+  const handleDragStart = (panelId: PanelId, source: 'left' | 'right') => {
+    setDraggedPanel(panelId);
+    setDragSource(source);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedPanel(null);
+    setDragSource(null);
+  };
+
+  const handleDrop = (targetPanelId: PanelId, targetSource: 'left' | 'right') => {
+    if (!draggedPanel || !dragSource) return;
+
+    // Get source and target arrays
+    const sourceArray = dragSource === 'left' ? [...leftPanelOrder] : [...rightPanelOrder];
+    const targetArray = targetSource === 'left' ? [...leftPanelOrder] : [...rightPanelOrder];
+
+    // Remove from source
+    const draggedIndex = sourceArray.indexOf(draggedPanel);
+    sourceArray.splice(draggedIndex, 1);
+
+    // Add to target
+    const targetIndex = targetArray.indexOf(targetPanelId);
+    if (dragSource === targetSource) {
+      // Same sidebar - reorder
+      const newArray = dragSource === 'left' ? [...leftPanelOrder] : [...rightPanelOrder];
+      const dragIdx = newArray.indexOf(draggedPanel);
+      const dropIdx = newArray.indexOf(targetPanelId);
+      newArray.splice(dragIdx, 1);
+      newArray.splice(dropIdx, 0, draggedPanel);
+      
+      if (dragSource === 'left') {
+        setLeftPanelOrder(newArray);
+      } else {
+        setRightPanelOrder(newArray);
+      }
+    } else {
+      // Different sidebar - move
+      targetArray.splice(targetIndex, 0, draggedPanel);
+      
+      if (dragSource === 'left') {
+        setLeftPanelOrder(sourceArray);
+        setRightPanelOrder(targetArray);
+      } else {
+        setRightPanelOrder(sourceArray);
+        setLeftPanelOrder(targetArray);
+      }
+    }
+  };
+
+  // Panel content renderer
+  const renderPanelContent = (panelId: PanelId) => {
+    switch (panelId) {
+      case 'decoder':
+        return <DecoderSelector />;
+      case 'accuracy':
+        return (
+          <>
+            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">
+              Accuracy History
+            </h3>
+            <AccuracyGauge accuracy={currentAccuracy} error={currentError} />
+          </>
+        );
+      case 'waterfall':
+        return (
+          <>
+            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">
+              Neural Dynamics
+            </h3>
+            <NeuralWaterfall width={330} height={150} maxNeurons={96} />
+          </>
+        );
+      case 'grid':
+        return <NeuronActivityGrid columns={12} maxNeurons={96} showLabels={true} />;
+      case 'stats':
+        return (
+          <>
+            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">
+              Live Metrics
+            </h3>
+            <QuickStats />
+          </>
+        );
+    }
+  };
+
+  // Panel titles
+  const panelTitles: Record<PanelId, string> = {
+    decoder: 'Decoder Selection',
+    accuracy: 'Accuracy History',
+    waterfall: 'Neural Dynamics',
+    grid: 'Neuron Activity',
+    stats: 'Live Metrics',
+  };
   
   // Overall system status
   const systemStatus = useMemo(() => {
@@ -178,9 +243,20 @@ export const ResearchDashboard = memo(function ResearchDashboard() {
         <div className="flex flex-1 min-h-0">
           {/* Left Sidebar - Controls */}
           <aside className="dashboard-sidebar w-80 shrink-0 overflow-y-auto">
-            <CollapsiblePanel title="Decoder Selection" defaultOpen={true}>
-              <DecoderSelector />
-            </CollapsiblePanel>
+            {leftPanelOrder.map((panelId) => (
+              <DraggablePanel
+                key={panelId}
+                id={panelId}
+                title={panelTitles[panelId]}
+                onDragStart={() => handleDragStart(panelId, 'left')}
+                onDragEnd={handleDragEnd}
+                onDrop={(targetId) => handleDrop(targetId as PanelId, 'left')}
+                isDragging={draggedPanel === panelId}
+                defaultOpen={true}
+              >
+                {renderPanelContent(panelId)}
+              </DraggablePanel>
+            ))}
           </aside>
           
           {/* Center - Main Visualization */}
@@ -195,45 +271,20 @@ export const ResearchDashboard = memo(function ResearchDashboard() {
           
           {/* Right Sidebar - Metrics */}
           <aside className="dashboard-sidebar w-96 shrink-0 overflow-y-auto">
-            {/* Accuracy History Card */}
-            <div className="dashboard-card p-4">
-              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">
-                Accuracy History
-              </h3>
-              <AccuracyGauge
-                accuracy={currentAccuracy}
-                error={currentError}
-              />
-            </div>
-
-            {/* Neural Dynamics (Waterfall) */}
-            <div className="dashboard-card p-1 overflow-hidden">
-               <div className="p-4 pb-0">
-                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                  Neural Dynamics
-                </h3>
-               </div>
-               <div className="p-2">
-                 <NeuralWaterfall width={330} height={150} maxNeurons={96} />
-               </div>
-            </div>
-            
-            {/* Neuron Activity Grid Card */}
-            <div className="dashboard-card p-4">
-              <NeuronActivityGrid
-                columns={12}
-                maxNeurons={96}
-                showLabels={true}
-              />
-            </div>
-            
-            {/* Quick Stats Card */}
-            <div className="dashboard-card p-4">
-              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">
-                Live Metrics
-              </h3>
-              <QuickStats />
-            </div>
+            {rightPanelOrder.map((panelId) => (
+              <DraggablePanel
+                key={panelId}
+                id={panelId}
+                title={panelTitles[panelId]}
+                onDragStart={() => handleDragStart(panelId, 'right')}
+                onDragEnd={handleDragEnd}
+                onDrop={(targetId) => handleDrop(targetId as PanelId, 'right')}
+                isDragging={draggedPanel === panelId}
+                defaultOpen={true}
+              >
+                {renderPanelContent(panelId)}
+              </DraggablePanel>
+            ))}
           </aside>
         </div>
         
