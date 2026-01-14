@@ -1,5 +1,6 @@
-// Main Dashboard Overlay Component
+// Main Dashboard Overlay Component - Memoized
 
+import { memo } from 'react';
 import { ConnectionStatus } from './ConnectionStatus';
 import { SessionManager } from './SessionManager';
 import { DecoderSelector } from './DecoderSelector';
@@ -7,16 +8,9 @@ import { MetricsPanel } from './MetricsPanel';
 import { VisualizationControls } from './VisualizationControls';
 import { DesyncAlert } from './DesyncAlert';
 
-export function Dashboard() {
-  console.log('[PhantomLoop] 🎨 Dashboard rendering');
-  
+export const Dashboard = memo(function Dashboard() {
   return (
     <div className="absolute inset-0 pointer-events-none z-50">
-      {/* DEBUG: Bright test element */}
-      <div className="absolute top-0 left-0 bg-red-500 text-white p-4 pointer-events-auto">
-        DASHBOARD IS HERE
-      </div>
-      
       {/* Top Bar */}
       <div className="absolute top-0 left-0 right-0 p-4 flex items-start justify-between pointer-events-auto">
         <div className="flex flex-col gap-2">
@@ -45,4 +39,4 @@ export function Dashboard() {
       </div>
     </div>
   );
-}
+});

@@ -1,9 +1,12 @@
-// Desync Alert Component
+// Desync Alert Component - Memoized
 
+import { memo } from 'react';
 import { useStore } from '../store';
 
-export function DesyncAlert() {
-  const { desyncDetected, totalLatency } = useStore();
+export const DesyncAlert = memo(function DesyncAlert() {
+  // Use individual selectors
+  const desyncDetected = useStore((state) => state.desyncDetected);
+  const totalLatency = useStore((state) => state.totalLatency);
 
   if (!desyncDetected) {
     return null;
@@ -34,4 +37,4 @@ export function DesyncAlert() {
       </div>
     </div>
   );
-}
+});

@@ -29,10 +29,10 @@ export function useDecoder() {
         const input: DecoderInput = {
           spikes: currentPacket.data.spikes.spike_counts,
           kinematics: {
-            x: currentPacket.data.kinematics.cursor_pos.x,
-            y: currentPacket.data.kinematics.cursor_pos.y,
-            vx: currentPacket.data.kinematics.cursor_vel.vx,
-            vy: currentPacket.data.kinematics.cursor_vel.vy,
+            x: currentPacket.data.kinematics.x,
+            y: currentPacket.data.kinematics.y,
+            vx: currentPacket.data.kinematics.vx,
+            vy: currentPacket.data.kinematics.vy,
           },
           history: historyRef.current,
         };

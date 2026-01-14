@@ -1,7 +1,7 @@
-// Target Marker Component
+// Target Marker Component - Optimized
 
-import { useRef } from 'react';
-import { Mesh } from 'three';
+import { memo, useRef, useMemo } from 'react';
+import { Mesh, Color } from 'three';
 import { useFrame } from '@react-three/fiber';
 import { to3D } from '../utils/coordinates';
 import { COLORS, VISUALIZATION } from '../utils/constants';
@@ -11,38 +11,39 @@ interface TargetMarkerProps {
   y: number;
 }
 
-export function TargetMarker({ x, y }: TargetMarkerProps) {
+export const TargetMarker = memo(function TargetMarker({ x, y }: TargetMarkerProps) {
   const ringRef = useRef<Mesh>(null);
-  const position = to3D(x, y, -0.5); // Slightly below cursors
+  const position = useMemo(() => to3D(x, y, -0.5), [x, y]); // Memoize position calculation
+  const targetColor = useMemo(() => new Color(COLORS.TARGET), []); // Memoize color
 
   // Rotating animation
-  useFrame(({ clock }) => {
+  useFrame((_, delta) => {
     if (ringRef.current) {
-      ringRef.current.rotation.y = clock.getElapsedTime() * 0.5;
+      ringRef.current.rotation.y += delta * 0.5;
     }
   });
 
   return (
     <group position={position}>
-      {/* Outer ring */}
+      {/* Outer ring - reduced segments for performance */}
       <mesh ref={ringRef} rotation={[Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[VISUALIZATION.TARGET_RADIUS, VISUALIZATION.TARGET_RADIUS + 0.2, 32]} />
+        <ringGeometry args={[VISUALIZATION.TARGET_RADIUS, VISUALIZATION.TARGET_RADIUS + 0.2, 16]} />
         <meshBasicMaterial 
-          color={COLORS.TARGET}
+          color={targetColor}
           transparent
           opacity={0.6}
         />
       </mesh>
 
-      {/* Inner glow */}
+      {/* Inner glow - reduced segments */}
       <mesh rotation={[Math.PI / 2, 0, 0]}>
-        <circleGeometry args={[VISUALIZATION.TARGET_RADIUS * 0.5, 32]} />
+        <circleGeometry args={[VISUALIZATION.TARGET_RADIUS * 0.5, 16]} />
         <meshBasicMaterial 
-          color={COLORS.TARGET}
+          color={targetColor}
           transparent
           opacity={0.3}
         />
       </mesh>
     </group>
   );
-}
+});

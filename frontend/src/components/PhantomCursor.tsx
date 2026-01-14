@@ -1,5 +1,6 @@
 // Phantom Cursor (Yellow - Intention)
 
+import { memo } from 'react';
 import { Cursor } from './Cursor';
 import { COLORS, VISUALIZATION } from '../utils/constants';
 
@@ -8,7 +9,7 @@ interface PhantomCursorProps {
   y: number;
 }
 
-export function PhantomCursor({ x, y }: PhantomCursorProps) {
+export const PhantomCursor = memo(function PhantomCursor({ x, y }: PhantomCursorProps) {
   return (
     <Cursor 
       x={x} 
@@ -18,4 +19,4 @@ export function PhantomCursor({ x, y }: PhantomCursorProps) {
       emissiveIntensity={0.8}
     />
   );
-}
+});

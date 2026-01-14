@@ -1,29 +1,41 @@
 // Error Visualization - Lines showing distance between Trinity cursors
+// Optimized with memoization
 
+import { memo, useMemo } from 'react';
 import { Line } from '@react-three/drei';
 import { useStore } from '../store';
 import { normalizePosition, to3D } from '../utils/coordinates';
-import { COLORS } from '../utils/constants';
 
-export function ErrorLines() {
-  const { currentPacket, decoderOutput } = useStore();
+export const ErrorLines = memo(function ErrorLines() {
+  // Use individual selectors for performance
+  const currentPacket = useStore((state) => state.currentPacket);
+  const decoderOutput = useStore((state) => state.decoderOutput);
 
-  if (!currentPacket?.data) return null;
+  // Memoize all calculations - use full objects in deps for React Compiler compatibility
+  const lines = useMemo(() => {
+    if (!currentPacket?.data) return null;
 
-  const intention = currentPacket.data.intention;
-  const kinematics = currentPacket.data.kinematics;
+    const intention = currentPacket.data.intention;
+    const kinematics = currentPacket.data.kinematics;
 
-  // Normalize coordinates
-  const phantomPos = normalizePosition(intention.target_x, intention.target_y);
-  const bioLinkPos = normalizePosition(kinematics.x, kinematics.y);
-  const loopBackPos = decoderOutput 
-    ? normalizePosition(decoderOutput.x, decoderOutput.y)
-    : bioLinkPos;
+    // Normalize coordinates
+    const phantomPos = normalizePosition(intention.target_x, intention.target_y);
+    const bioLinkPos = normalizePosition(kinematics.x, kinematics.y);
+    const loopBackPos = decoderOutput 
+      ? normalizePosition(decoderOutput.x, decoderOutput.y)
+      : bioLinkPos;
 
-  // Convert to 3D
-  const phantom3D = to3D(phantomPos.x, phantomPos.y, 0);
-  const bioLink3D = to3D(bioLinkPos.x, bioLinkPos.y, 0);
-  const loopBack3D = to3D(loopBackPos.x, loopBackPos.y, 0);
+    // Convert to 3D
+    const phantom3D = to3D(phantomPos.x, phantomPos.y, 0);
+    const bioLink3D = to3D(bioLinkPos.x, bioLinkPos.y, 0);
+    const loopBack3D = to3D(loopBackPos.x, loopBackPos.y, 0);
+
+    return { phantom3D, bioLink3D, loopBack3D, hasDecoder: !!decoderOutput };
+  }, [currentPacket?.data, decoderOutput]);
+
+  if (!lines) return null;
+
+  const { phantom3D, bioLink3D, loopBack3D, hasDecoder } = lines;
 
   return (
     <>
@@ -39,7 +51,7 @@ export function ErrorLines() {
       />
 
       {/* Bio-Link → Loop-Back (Decoder Error) */}
-      {decoderOutput && (
+      {hasDecoder && (
         <Line
           points={[bioLink3D, loopBack3D]}
           color="#FF00FF"
@@ -50,7 +62,7 @@ export function ErrorLines() {
       )}
 
       {/* Phantom → Loop-Back (Total Error) */}
-      {decoderOutput && (
+      {hasDecoder && (
         <Line
           points={[phantom3D, loopBack3D]}
           color="#FF4444"
@@ -63,4 +75,4 @@ export function ErrorLines() {
       )}
     </>
   );
-}
+});

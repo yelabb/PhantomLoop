@@ -1,5 +1,6 @@
 // Bio-Link Cursor (Green - Ground Truth)
 
+import { memo } from 'react';
 import { Cursor } from './Cursor';
 import { COLORS, VISUALIZATION } from '../utils/constants';
 
@@ -8,7 +9,7 @@ interface BioLinkCursorProps {
   y: number;
 }
 
-export function BioLinkCursor({ x, y }: BioLinkCursorProps) {
+export const BioLinkCursor = memo(function BioLinkCursor({ x, y }: BioLinkCursorProps) {
   return (
     <Cursor 
       x={x} 
@@ -18,4 +19,4 @@ export function BioLinkCursor({ x, y }: BioLinkCursorProps) {
       emissiveIntensity={0.6}
     />
   );
-}
+});

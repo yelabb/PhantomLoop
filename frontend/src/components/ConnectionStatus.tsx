@@ -1,9 +1,13 @@
-// Connection Status Indicator
+// Connection Status Indicator - Memoized
 
+import { memo } from 'react';
 import { useStore } from '../store';
 
-export function ConnectionStatus() {
-  const { isConnected, sessionCode, connectionError } = useStore();
+export const ConnectionStatus = memo(function ConnectionStatus() {
+  // Use individual selectors
+  const isConnected = useStore((state) => state.isConnected);
+  const sessionCode = useStore((state) => state.sessionCode);
+  const connectionError = useStore((state) => state.connectionError);
 
   return (
     <div className="bg-gray-900/90 backdrop-blur-sm px-4 py-3 rounded-lg border border-gray-700">
@@ -32,4 +36,4 @@ export function ConnectionStatus() {
       </div>
     </div>
   );
-}
+});

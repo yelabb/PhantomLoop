@@ -1,10 +1,11 @@
-// Metrics Panel Component
+// Metrics Panel Component - Optimized with selectors
 
+import { memo } from 'react';
 import { useStore } from '../store';
 import { PERFORMANCE_THRESHOLDS } from '../utils/constants';
 
 // Define MetricItem outside the component
-const MetricItem = ({ 
+const MetricItem = memo(({ 
   label, 
   value, 
   unit, 
@@ -33,17 +34,16 @@ const MetricItem = ({
       </span>
     </div>
   );
-};
+});
 
-export function MetricsPanel() {
-  const {
-    fps,
-    networkLatency,
-    decoderLatency,
-    totalLatency,
-    droppedPackets,
-    packetsReceived,
-  } = useStore();
+export const MetricsPanel = memo(function MetricsPanel() {
+  // Use individual selectors to prevent re-renders from unrelated state changes
+  const fps = useStore((state) => state.fps);
+  const networkLatency = useStore((state) => state.networkLatency);
+  const decoderLatency = useStore((state) => state.decoderLatency);
+  const totalLatency = useStore((state) => state.totalLatency);
+  const droppedPackets = useStore((state) => state.droppedPackets);
+  const packetsReceived = useStore((state) => state.packetsReceived);
 
   return (
     <div className="bg-gray-900/90 backdrop-blur-sm p-4 rounded-lg border border-gray-700 w-64">
@@ -107,4 +107,4 @@ export function MetricsPanel() {
       </div>
     </div>
   );
-}
+});

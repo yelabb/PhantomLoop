@@ -1,21 +1,25 @@
-// Decoder Selector Component
+// Decoder Selector Component - Memoized
 
-import { useEffect } from 'react';
+import { memo, useEffect, useCallback } from 'react';
 import { useStore } from '../store';
 import { baselineDecoders } from '../decoders/baselines';
 
-export function DecoderSelector() {
-  const { 
-    activeDecoder, 
-    availableDecoders, 
-    setActiveDecoder, 
-    registerDecoder 
-  } = useStore();
+export const DecoderSelector = memo(function DecoderSelector() {
+  // Use individual selectors
+  const activeDecoder = useStore((state) => state.activeDecoder);
+  const availableDecoders = useStore((state) => state.availableDecoders);
+  const setActiveDecoder = useStore((state) => state.setActiveDecoder);
+  const registerDecoder = useStore((state) => state.registerDecoder);
 
   // Register baseline decoders on mount
   useEffect(() => {
     baselineDecoders.forEach(decoder => registerDecoder(decoder));
   }, [registerDecoder]);
+
+  const handleDecoderChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
+    const decoder = availableDecoders.find(d => d.id === e.target.value);
+    setActiveDecoder(decoder || null);
+  }, [availableDecoders, setActiveDecoder]);
 
   return (
     <div className="bg-gray-900/90 backdrop-blur-sm p-4 rounded-lg border border-gray-700 w-80 pointer-events-auto">
@@ -23,11 +27,7 @@ export function DecoderSelector() {
       
       <select
         value={activeDecoder?.id || ''}
-        onChange={(e) => {
-          console.log('[DecoderSelector] Selected:', e.target.value);
-          const decoder = availableDecoders.find(d => d.id === e.target.value);
-          setActiveDecoder(decoder || null);
-        }}
+        onChange={handleDecoderChange}
         className="w-full bg-gray-800 text-white px-3 py-2 rounded text-sm border border-gray-600 focus:border-loopback focus:outline-none cursor-pointer"
       >
         <option value="">None (Phantom only)</option>
@@ -52,4 +52,4 @@ export function DecoderSelector() {
       )}
     </div>
   );
-}
+});

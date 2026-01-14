@@ -1,5 +1,6 @@
 // Loop-Back Cursor (Blue - Decoder Output)
 
+import { memo } from 'react';
 import { Cursor } from './Cursor';
 import { COLORS, VISUALIZATION } from '../utils/constants';
 
@@ -8,7 +9,7 @@ interface LoopBackCursorProps {
   y: number;
 }
 
-export function LoopBackCursor({ x, y }: LoopBackCursorProps) {
+export const LoopBackCursor = memo(function LoopBackCursor({ x, y }: LoopBackCursorProps) {
   return (
     <Cursor 
       x={x} 
@@ -18,4 +19,4 @@ export function LoopBackCursor({ x, y }: LoopBackCursorProps) {
       emissiveIntensity={0.7}
     />
   );
-}
+});

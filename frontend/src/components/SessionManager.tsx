@@ -1,21 +1,25 @@
-// Session Manager Component
+// Session Manager Component - Memoized
 
-import { useState } from 'react';
+import { memo, useState, useCallback } from 'react';
 import { useStore } from '../store';
 import { SERVER_CONFIG } from '../utils/constants';
 
-export function SessionManager() {
-  const { isConnected, connectWebSocket, disconnectWebSocket } = useStore();
+export const SessionManager = memo(function SessionManager() {
+  // Use individual selectors
+  const isConnected = useStore((state) => state.isConnected);
+  const connectWebSocket = useStore((state) => state.connectWebSocket);
+  const disconnectWebSocket = useStore((state) => state.disconnectWebSocket);
+  
   const [sessionInput, setSessionInput] = useState('');
   const [isCreating, setIsCreating] = useState(false);
 
-  const handleConnect = () => {
+  const handleConnect = useCallback(() => {
     if (sessionInput.trim()) {
       connectWebSocket(sessionInput.trim());
     }
-  };
+  }, [sessionInput, connectWebSocket]);
 
-  const handleCreateSession = async () => {
+  const handleCreateSession = useCallback(async () => {
     setIsCreating(true);
     try {
       const response = await fetch(`${SERVER_CONFIG.BASE_URL.replace('wss://', 'https://').replace('ws://', 'http://')}/api/sessions/create`, {
@@ -31,7 +35,7 @@ export function SessionManager() {
     } finally {
       setIsCreating(false);
     }
-  };
+  }, [connectWebSocket]);
 
   return (
     <div className="bg-gray-900/90 backdrop-blur-sm p-4 rounded-lg border border-gray-700 w-80">
@@ -77,4 +81,4 @@ export function SessionManager() {
       </div>
     </div>
   );
-}
+});

@@ -1,9 +1,10 @@
-// Visualization Controls Component
+// Visualization Controls Component - Optimized with selectors
 
+import { memo } from 'react';
 import { useStore } from '../store';
 
 // Define CheckboxItem outside the component
-const CheckboxItem = ({ 
+const CheckboxItem = memo(({ 
   label, 
   checked, 
   onChange, 
@@ -23,25 +24,24 @@ const CheckboxItem = ({
     />
     <span className={`text-sm ${color || 'text-white'}`}>{label}</span>
   </label>
-);
+));
 
-export function VisualizationControls() {
-  const {
-    showPhantom,
-    showBioLink,
-    showLoopBack,
-    showTrails,
-    showTarget,
-    showGrid,
-    cameraMode,
-    togglePhantom,
-    toggleBioLink,
-    toggleLoopBack,
-    toggleTrails,
-    toggleTarget,
-    toggleGrid,
-    setCameraMode,
-  } = useStore();
+export const VisualizationControls = memo(function VisualizationControls() {
+  // Use individual selectors to prevent unnecessary re-renders
+  const showPhantom = useStore((state) => state.showPhantom);
+  const showBioLink = useStore((state) => state.showBioLink);
+  const showLoopBack = useStore((state) => state.showLoopBack);
+  const showTrails = useStore((state) => state.showTrails);
+  const showTarget = useStore((state) => state.showTarget);
+  const showGrid = useStore((state) => state.showGrid);
+  const cameraMode = useStore((state) => state.cameraMode);
+  const togglePhantom = useStore((state) => state.togglePhantom);
+  const toggleBioLink = useStore((state) => state.toggleBioLink);
+  const toggleLoopBack = useStore((state) => state.toggleLoopBack);
+  const toggleTrails = useStore((state) => state.toggleTrails);
+  const toggleTarget = useStore((state) => state.toggleTarget);
+  const toggleGrid = useStore((state) => state.toggleGrid);
+  const setCameraMode = useStore((state) => state.setCameraMode);
 
   return (
     <div className="bg-gray-900/90 backdrop-blur-sm p-4 rounded-lg border border-gray-700 w-80">
@@ -115,4 +115,4 @@ export function VisualizationControls() {
       </div>
     </div>
   );
-}
+});
