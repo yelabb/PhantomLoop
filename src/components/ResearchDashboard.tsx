@@ -258,7 +258,7 @@ export const ResearchDashboard = memo(function ResearchDashboard() {
                 {renderPanelContent(panelId)}
               </DraggablePanel>
             ))}
-          </aside>
+          </ResizablePanel>
           
           {/* Center - Main Visualization */}
           <main className="flex-1 flex flex-col items-center justify-center p-6 min-w-0 bg-gray-900/50 gap-6 overflow-y-auto">
