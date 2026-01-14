@@ -7,7 +7,10 @@ import { CenterOutArena } from './visualization/CenterOutArena';
 import { AccuracyGauge } from './visualization/AccuracyGauge';
 import { QuickStats } from './visualization/QuickStats';
 import { NeuronActivityGrid } from './visualization/NeuronActivityGrid';
+import { NeuralWaterfall } from './visualization/NeuralWaterfall';
+import { DesyncMonitor } from './visualization/DesyncMonitor';
 import { ConnectionStatus } from './ConnectionStatus';
+import { PlaybackControls } from './PlaybackControls';
 import { DecoderSelector } from './DecoderSelector';
 import { DecoderLoadingOverlay } from './LoadingStates';
 import { useStore } from '../store';
@@ -167,6 +170,7 @@ export const ResearchDashboard = memo(function ResearchDashboard() {
           </div>
           
           <div className="flex items-center gap-4">
+            <PlaybackControls />
             <StatusBadge
               status={systemStatus}
               label={isConnected ? `${totalLatency.toFixed(0)}ms latency` : 'Offline'}
@@ -185,9 +189,14 @@ export const ResearchDashboard = memo(function ResearchDashboard() {
           </aside>
           
           {/* Center - Main Visualization */}
-          <main className="flex-1 flex items-center justify-center p-6 min-w-0 bg-gray-900/30">
+          <main className="flex-1 flex flex-col items-center justify-center p-6 min-w-0 bg-gray-900/30 gap-6 overflow-y-auto">
             <div className="dashboard-card p-6">
               <CenterOutArena />
+            </div>
+            
+            {/* Trajectory Error / Desync Monitor */}
+            <div className="w-full max-w-[500px]">
+               <DesyncMonitor width={500} height={80} />
             </div>
           </main>
           
@@ -202,6 +211,18 @@ export const ResearchDashboard = memo(function ResearchDashboard() {
                 accuracy={currentAccuracy}
                 error={currentError}
               />
+            </div>
+
+            {/* Neural Dynamics (Waterfall) */}
+            <div className="dashboard-card p-1 overflow-hidden">
+               <div className="p-4 pb-0">
+                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                  Neural Dynamics
+                </h3>
+               </div>
+               <div className="p-2">
+                 <NeuralWaterfall width={330} height={150} maxNeurons={96} />
+               </div>
             </div>
             
             {/* Neuron Activity Grid Card */}
