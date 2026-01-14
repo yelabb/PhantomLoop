@@ -6,7 +6,6 @@ import { ConnectionStatus } from './ConnectionStatus';
 import { SessionManager } from './SessionManager';
 import { DecoderSelector } from './DecoderSelector';
 import { VisualizationControls } from './VisualizationControls';
-import { DesyncAlert } from './DesyncAlert';
 import { useStore } from '../store';
 import { DecoderLoadingOverlay } from './LoadingStates';
 
@@ -74,11 +73,6 @@ export const Dashboard = memo(function Dashboard() {
           <SessionManager />
           <DecoderSelector />
           <VisualizationControls />
-        </div>
-
-        {/* Bottom Center - Desync Alert */}
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 pointer-events-auto">
-          <DesyncAlert />
         </div>
         
         {/* Bottom right - minimal keyboard hint */}

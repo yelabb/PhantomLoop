@@ -10,7 +10,6 @@ import { QuickStats } from './visualization/QuickStats';
 import { ConnectionStatus } from './ConnectionStatus';
 import { SessionManager } from './SessionManager';
 import { DecoderSelector } from './DecoderSelector';
-import { DesyncAlert } from './DesyncAlert';
 import { DecoderLoadingOverlay } from './LoadingStates';
 import { useStore } from '../store';
 import { createPortal } from 'react-dom';
@@ -274,11 +273,6 @@ export const ResearchDashboard = memo(function ResearchDashboard() {
               <div className="w-3 h-3 rounded-full border border-purple-500" />
               <span className="text-xs text-gray-400">Target</span>
             </div>
-          </div>
-          
-          {/* Center - Desync Alert */}
-          <div className="absolute left-1/2 -translate-x-1/2">
-            <DesyncAlert />
           </div>
           
           {/* Keyboard hints */}
