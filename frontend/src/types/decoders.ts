@@ -2,6 +2,8 @@
 
 export type DecoderType = 'javascript' | 'tfjs' | 'wasm';
 
+export type TFJSModelType = 'linear' | 'mlp' | 'lstm' | 'attention' | 'kalman-neural';
+
 export interface Decoder {
   id: string;
   name: string;
@@ -12,7 +14,12 @@ export interface Decoder {
   code?: string;
   
   // For TensorFlow.js decoders
-  modelUrl?: string;
+  modelUrl?: string; // Remote URL (optional - models can be created in-browser)
+  tfjsModelType?: TFJSModelType; // Built-in model type
+  
+  // Architecture info for display
+  architecture?: string;
+  params?: number;
   
   // Performance metrics
   avgLatency?: number;

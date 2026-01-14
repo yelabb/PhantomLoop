@@ -1,8 +1,10 @@
 // Unified decoder execution hook - Optimized for 40Hz packet rate
+// Supports both synchronous JS decoders and async TensorFlow.js decoders
 
 import { useEffect, useRef, useCallback } from 'react';
 import { useStore } from '../store';
 import { executeDecoder, clearDecoderCache } from '../decoders/executeDecoder';
+import { clearHistory as clearTFJSHistory } from '../decoders/tfjsInference';
 import type { DecoderInput, DecoderOutput } from '../types/decoders';
 
 // Use selectors to prevent unnecessary re-renders
@@ -19,40 +21,50 @@ export function useDecoder() {
 
   const historyRef = useRef<DecoderOutput[]>([]);
   const lastProcessedSeqRef = useRef<number>(-1);
+  const isProcessingRef = useRef(false);
 
-  // Process packet synchronously - no async overhead
-  const processPacket = useCallback(() => {
+  // Process packet - now supports async TFJS decoders
+  const processPacket = useCallback(async () => {
     if (!currentPacket || !activeDecoder) return;
     
-    // Skip if we already processed this packet
+    // Skip if we already processed this packet or still processing previous
     const seqNum = currentPacket.data.sequence_number;
     if (seqNum === lastProcessedSeqRef.current) return;
+    if (isProcessingRef.current) return; // Skip if still processing (for slow TFJS inference)
+    
     lastProcessedSeqRef.current = seqNum;
+    isProcessingRef.current = true;
 
-    // Prepare decoder input
-    const input: DecoderInput = {
-      spikes: currentPacket.data.spikes.spike_counts,
-      kinematics: {
-        x: currentPacket.data.kinematics.x,
-        y: currentPacket.data.kinematics.y,
-        vx: currentPacket.data.kinematics.vx,
-        vy: currentPacket.data.kinematics.vy,
-      },
-      history: historyRef.current,
-    };
+    try {
+      // Prepare decoder input
+      const input: DecoderInput = {
+        spikes: currentPacket.data.spikes.spike_counts,
+        kinematics: {
+          x: currentPacket.data.kinematics.x,
+          y: currentPacket.data.kinematics.y,
+          vx: currentPacket.data.kinematics.vx,
+          vy: currentPacket.data.kinematics.vy,
+        },
+        history: historyRef.current,
+      };
 
-    // Execute decoder synchronously (function is pre-compiled and cached)
-    const output = executeDecoder(activeDecoder, input);
+      // Execute decoder (async for TFJS, sync for JS)
+      const output = await executeDecoder(activeDecoder, input);
 
-    // Update history efficiently - mutate in place
-    historyRef.current.push(output);
-    if (historyRef.current.length > 40) {
-      historyRef.current.shift();
+      // Update history efficiently - mutate in place
+      historyRef.current.push(output);
+      if (historyRef.current.length > 40) {
+        historyRef.current.shift();
+      }
+
+      // Update store
+      updateDecoderOutput(output);
+      updateDecoderLatency(output.latency);
+    } catch (error) {
+      console.error('[useDecoder] Execution error:', error);
+    } finally {
+      isProcessingRef.current = false;
     }
-
-    // Update store
-    updateDecoderOutput(output);
-    updateDecoderLatency(output.latency);
   }, [currentPacket, activeDecoder, updateDecoderOutput, updateDecoderLatency]);
 
   // Run decoder when packet changes
@@ -64,6 +76,8 @@ export function useDecoder() {
   useEffect(() => {
     historyRef.current = [];
     lastProcessedSeqRef.current = -1;
+    isProcessingRef.current = false;
     clearDecoderCache();
+    clearTFJSHistory();
   }, [activeDecoder?.id]);
 }
