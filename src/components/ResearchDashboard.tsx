@@ -8,7 +8,6 @@ import { AccuracyGauge } from './visualization/AccuracyGauge';
 import { QuickStats } from './visualization/QuickStats';
 import { NeuronActivityGrid } from './visualization/NeuronActivityGrid';
 import { NeuralWaterfall } from './visualization/NeuralWaterfall';
-import { DesyncMonitor } from './visualization/DesyncMonitor';
 import { ConnectionStatus } from './ConnectionStatus';
 import { PlaybackControls } from './PlaybackControls';
 import { DecoderSelector } from './DecoderSelector';
@@ -170,7 +169,6 @@ export const ResearchDashboard = memo(function ResearchDashboard() {
           </div>
           
           <div className="flex items-center gap-4">
-            <PlaybackControls />
             <StatusBadge
               status={systemStatus}
               label={isConnected ? `${totalLatency.toFixed(0)}ms latency` : 'Offline'}
@@ -190,13 +188,11 @@ export const ResearchDashboard = memo(function ResearchDashboard() {
           
           {/* Center - Main Visualization */}
           <main className="flex-1 flex flex-col items-center justify-center p-6 min-w-0 bg-gray-900/30 gap-6 overflow-y-auto">
-            <div className="dashboard-card p-6">
+            <div className="dashboard-card p-6 flex flex-col items-center gap-6">
               <CenterOutArena />
-            </div>
-            
-            {/* Trajectory Error / Desync Monitor */}
-            <div className="w-full max-w-[500px]">
-               <DesyncMonitor width={500} height={80} />
+              <div className="w-full flex justify-center">
+                <PlaybackControls />
+              </div>
             </div>
           </main>
           

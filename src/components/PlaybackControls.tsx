@@ -3,9 +3,9 @@ import { useStore } from '../store';
 import { SERVER_CONFIG } from '../utils/constants';
 
 // Icons
-const PlayIcon = () => <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>;
-const PauseIcon = () => <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>;
-const StopIcon = () => <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h12v12H6z"/></svg>;
+const PlayIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>;
+const PauseIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>;
+const StopIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h12v12H6z"/></svg>;
 
 export const PlaybackControls = memo(function PlaybackControls() {
   const sessionCode = useStore((state) => state.sessionCode);
@@ -40,14 +40,14 @@ export const PlaybackControls = memo(function PlaybackControls() {
   if (!isConnected) return null;
 
   return (
-    <div className="flex items-center gap-1 bg-gray-900/50 rounded-lg p-1 border border-gray-700/50">
+    <div className="flex items-center gap-2 bg-gray-800/80 backdrop-blur-md rounded-full px-4 py-2 border border-gray-700/50 shadow-xl">
       <button
         onClick={() => handleControl('resume')}
         disabled={isPlaying}
-        className={`p-2 rounded-md transition-colors ${
+        className={`p-2 rounded-full transition-colors ${
             isPlaying 
                 ? 'text-gray-600 cursor-not-allowed' 
-                : 'text-green-400 hover:bg-green-500/10'
+                : 'text-white bg-green-600 hover:bg-green-500 shadow-lg shadow-green-500/20'
         }`}
         title="Resume Stream"
       >
@@ -57,21 +57,21 @@ export const PlaybackControls = memo(function PlaybackControls() {
       <button
         onClick={() => handleControl('pause')}
         disabled={!isPlaying}
-        className={`p-2 rounded-md transition-colors ${
+        className={`p-2 rounded-full transition-colors ${
             !isPlaying 
                 ? 'text-gray-600 cursor-not-allowed' 
-                : 'text-yellow-400 hover:bg-yellow-500/10'
+                : 'text-white bg-yellow-600 hover:bg-yellow-500 shadow-lg shadow-yellow-500/20'
         }`}
         title="Pause Stream"
       >
         <PauseIcon />
       </button>
 
-      <div className="w-px h-4 bg-gray-700/50 mx-1" />
+      <div className="w-px h-6 bg-gray-700 mx-1" />
 
        <button
         onClick={() => handleControl('stop')}
-        className="p-2 rounded-md text-red-400 hover:bg-red-500/10 transition-colors"
+        className="p-2 rounded-full text-red-400 hover:bg-red-500/20 transition-colors"
         title="Stop/Reset"
       >
         <StopIcon />
