@@ -1,7 +1,7 @@
 // Center-Out Arena - 2D Top-down visualization optimized for researchers
 // Shows targets, cursor trajectories, and real-time error visualization
 
-import { memo, useMemo, useReducer, useRef } from 'react';
+import { memo, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useStore } from '../../store';
 import { COLORS } from '../../utils/constants';
@@ -17,7 +17,6 @@ const CENTER = ARENA_SIZE / 2;
 const TARGET_RADIUS = 210;
 const CURSOR_SIZE = 18;
 const TARGET_SIZE = 28;
-const TRAIL_MAX_LENGTH = 60;
 
 // Target positions (8 directions like Neuralink's center-out task)
 const TARGET_ANGLES = [0, 45, 90, 135, 180, 225, 270, 315];
@@ -209,49 +208,9 @@ const ErrorLine = memo(function ErrorLine({
   );
 });
 
-// Trail visualization (shows recent trajectory)
-const Trail = memo(function Trail({
-  points,
-  color,
-}: {
-  points: Point[];
-  color: string;
-}) {
-  if (points.length < 2) return null;
-  
-  const pathData = points.reduce((acc, point, i) => {
-    if (i === 0) return `M ${point.x} ${point.y}`;
-    return `${acc} L ${point.x} ${point.y}`;
-  }, '');
-  
-  return (
-    <svg className="absolute inset-0 pointer-events-none" style={{ zIndex: 3 }}>
-      <defs>
-        <linearGradient id={`trail-${color}`} x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor={color} stopOpacity="0" />
-          <stop offset="100%" stopColor={color} stopOpacity="0.7" />
-        </linearGradient>
-      </defs>
-      <path
-        d={pathData}
-        fill="none"
-        stroke={`url(#trail-${color})`}
-        strokeWidth={2}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-});
-
 export const CenterOutArena = memo(function CenterOutArena() {
   const currentPacket = useStore((state) => state.currentPacket);
   const decoderOutput = useStore((state) => state.decoderOutput);
-  
-  // Trail history - using refs with a counter for safe updates
-  const groundTruthTrailRef = useRef<Point[]>([]);
-  const decodedTrailRef = useRef<Point[]>([]);
-  const [, forceRender] = useReducer(x => x + 1, 0);
   
   // Active target (based on intention)
   const activeTarget = useMemo(() => {
@@ -294,32 +253,6 @@ export const CenterOutArena = memo(function CenterOutArena() {
     return Math.min(d / (ARENA_SIZE / 2), 1);
   }, [groundTruthPos, decodedPos]);
   
-  // Update trails inline (before render) - avoids useEffect setState issues
-  // This is safe because we're only mutating refs
-  if (groundTruthPos.x !== CENTER || groundTruthPos.y !== CENTER) {
-    const lastGT = groundTruthTrailRef.current[groundTruthTrailRef.current.length - 1];
-    if (!lastGT || lastGT.x !== groundTruthPos.x || lastGT.y !== groundTruthPos.y) {
-      groundTruthTrailRef.current = [
-        ...groundTruthTrailRef.current.slice(-TRAIL_MAX_LENGTH + 1),
-        groundTruthPos,
-      ];
-    }
-  }
-  
-  if (decoderOutput) {
-    const lastDec = decodedTrailRef.current[decodedTrailRef.current.length - 1];
-    if (!lastDec || lastDec.x !== decodedPos.x || lastDec.y !== decodedPos.y) {
-      decodedTrailRef.current = [
-        ...decodedTrailRef.current.slice(-TRAIL_MAX_LENGTH + 1),
-        decodedPos,
-      ];
-    }
-  }
-  
-  // Copy refs to local vars for render (avoids compiler warnings)
-  const groundTruthTrail = groundTruthTrailRef.current;
-  const decodedTrail = decodedTrailRef.current;
-  
   return (
     <div 
       className="relative rounded-2xl overflow-hidden"
@@ -346,10 +279,6 @@ export const CenterOutArena = memo(function CenterOutArena() {
         {/* Target circle */}
         <circle cx={CENTER} cy={CENTER} r={TARGET_RADIUS} fill="none" stroke="#333" strokeWidth="1" strokeDasharray="4,4" />
       </svg>
-      
-      {/* Trails */}
-      <Trail points={groundTruthTrail} color={COLORS.BIOLINK} />
-      {decoderOutput && <Trail points={decodedTrail} color={COLORS.LOOPBACK} />}
       
       {/* Error line */}
       {decoderOutput && (
