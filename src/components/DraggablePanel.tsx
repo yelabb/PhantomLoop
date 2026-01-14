@@ -61,9 +61,9 @@ export const DraggablePanel = memo(function DraggablePanel({
   return (
     <motion.div
       ref={dragRef}
-      className={`dashboard-card overflow-hidden transition-all duration-200 ${
+      className={`dashboard-card overflow-hidden transition-all duration-200 mb-4 ${
         isDragging ? 'opacity-50 scale-95' : ''
-      } ${isDragOver ? 'ring-2 ring-blue-500' : ''}`}
+      } ${isDragOver ? 'ring-2 ring-blue-500 shadow-lg shadow-blue-500/50' : ''}`}
       draggable
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
@@ -73,14 +73,14 @@ export const DraggablePanel = memo(function DraggablePanel({
       layout
     >
       <div
-        className="w-full flex items-center justify-between p-4 hover:bg-gray-800/30 transition-colors cursor-move"
+        className="w-full flex items-center justify-between p-3 hover:bg-gray-800/30 transition-colors cursor-move"
         onClick={() => setIsOpen(!isOpen)}
       >
         <div className="flex items-center gap-3">
-          <span className="text-gray-600 text-lg cursor-grab active:cursor-grabbing">
+          <span className="text-gray-500 text-base cursor-grab active:cursor-grabbing hover:text-blue-400 transition-colors">
             ⋮⋮
           </span>
-          <span className="text-sm font-semibold text-gray-300 uppercase tracking-wider">
+          <span className="text-xs font-semibold text-gray-300 uppercase tracking-wider">
             {title}
           </span>
         </div>
@@ -98,7 +98,7 @@ export const DraggablePanel = memo(function DraggablePanel({
         transition={{ duration: 0.2 }}
         style={{ overflow: 'hidden' }}
       >
-        <div className="p-4 pt-0">{children}</div>
+        <div className="p-3 pt-0">{children}</div>
       </motion.div>
     </motion.div>
   );

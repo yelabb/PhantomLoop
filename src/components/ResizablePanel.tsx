@@ -7,6 +7,9 @@ interface ResizablePanelProps {
   maxWidth?: number;
   defaultWidth?: number;
   className?: string;
+  onPanelDragOver?: () => void;
+  onPanelDragLeave?: () => void;
+  isDragTarget?: boolean;
 }
 
 export const ResizablePanel = memo(function ResizablePanel({
@@ -16,6 +19,9 @@ export const ResizablePanel = memo(function ResizablePanel({
   maxWidth = 600,
   defaultWidth = 320,
   className = '',
+  onPanelDragOver,
+  onPanelDragLeave,
+  isDragTarget = false,
 }: ResizablePanelProps) {
   const [width, setWidth] = useState(defaultWidth);
   const [isResizing, setIsResizing] = useState(false);
@@ -68,8 +74,15 @@ export const ResizablePanel = memo(function ResizablePanel({
   return (
     <aside
       ref={panelRef}
-      className={`dashboard-sidebar shrink-0 overflow-y-auto relative ${className}`}
+      className={`dashboard-sidebar shrink-0 overflow-y-auto relative transition-all duration-200 ${className} ${
+        isDragTarget ? 'bg-blue-500/10 border-blue-500' : ''
+      }`}
       style={{ width: `${width}px` }}
+      onDragOver={(e) => {
+        e.preventDefault();
+        onPanelDragOver?.();
+      }}
+      onDragLeave={onPanelDragLeave}
     >
       {children}
       

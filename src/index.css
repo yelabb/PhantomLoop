@@ -168,7 +168,7 @@ canvas {
 
 /* Dashboard sidebar */
 .dashboard-sidebar {
-  @apply flex flex-col gap-4 p-6;
+  @apply flex flex-col p-4;
   @apply bg-gray-950/95 backdrop-blur-sm;
   @apply border-r border-gray-800/70;
 }

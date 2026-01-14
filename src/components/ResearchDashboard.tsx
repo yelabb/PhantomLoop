@@ -77,6 +77,7 @@ export const ResearchDashboard = memo(function ResearchDashboard() {
   const [rightPanelOrder, setRightPanelOrder] = useState<PanelId[]>(['accuracy', 'waterfall', 'grid', 'stats']);
   const [draggedPanel, setDraggedPanel] = useState<PanelId | null>(null);
   const [dragSource, setDragSource] = useState<'left' | 'right' | null>(null);
+  const [dragOverSidebar, setDragOverSidebar] = useState<'left' | 'right' | null>(null);
   
   // Calculate and update accuracy continuously
   useEffect(() => {
@@ -116,6 +117,7 @@ export const ResearchDashboard = memo(function ResearchDashboard() {
   const handleDragEnd = () => {
     setDraggedPanel(null);
     setDragSource(null);
+    setDragOverSidebar(null);
   };
 
   const handleDrop = (targetPanelId: PanelId, targetSource: 'left' | 'right') => {
@@ -156,6 +158,38 @@ export const ResearchDashboard = memo(function ResearchDashboard() {
         setLeftPanelOrder(targetArray);
       }
     }
+    
+    setDragOverSidebar(null);
+  };
+
+  // Handle dropping on empty sidebar area
+  const handleSidebarDrop = (targetSide: 'left' | 'right') => {
+    if (!draggedPanel || !dragSource) return;
+    
+    if (dragSource === targetSide) {
+      // Same sidebar, do nothing
+      return;
+    }
+
+    // Remove from source
+    const sourceArray = dragSource === 'left' ? [...leftPanelOrder] : [...rightPanelOrder];
+    const targetArray = targetSide === 'left' ? [...leftPanelOrder] : [...rightPanelOrder];
+    
+    const draggedIndex = sourceArray.indexOf(draggedPanel);
+    sourceArray.splice(draggedIndex, 1);
+    
+    // Add to end of target
+    targetArray.push(draggedPanel);
+    
+    if (dragSource === 'left') {
+      setLeftPanelOrder(sourceArray);
+      setRightPanelOrder(targetArray);
+    } else {
+      setRightPanelOrder(sourceArray);
+      setLeftPanelOrder(targetArray);
+    }
+    
+    setDragOverSidebar(null);
   };
 
   // Panel content renderer
@@ -243,7 +277,15 @@ export const ResearchDashboard = memo(function ResearchDashboard() {
         {/* Main Content Area */}
         <div className="flex flex-1 min-h-0">
           {/* Left Sidebar - Controls */}
-          <ResizablePanel side="left" defaultWidth={320} minWidth={250} maxWidth={500}>
+          <ResizablePanel 
+            side="left" 
+            defaultWidth={320} 
+            minWidth={250} 
+            maxWidth={500}
+            onPanelDragOver={() => setDragOverSidebar('left')}
+            onPanelDragLeave={() => setDragOverSidebar(null)}
+            isDragTarget={dragOverSidebar === 'left' && dragSource !== 'left'}
+          >
             {leftPanelOrder.map((panelId) => (
               <DraggablePanel
                 key={panelId}
@@ -271,7 +313,15 @@ export const ResearchDashboard = memo(function ResearchDashboard() {
           </main>
           
           {/* Right Sidebar - Metrics */}
-          <ResizablePanel side="right" defaultWidth={384} minWidth={300} maxWidth={600}>
+          <ResizablePanel 
+            side="right" 
+            defaultWidth={384} 
+            minWidth={300} 
+            maxWidth={600}
+            onPanelDragOver={() => setDragOverSidebar('right')}
+            onPanelDragLeave={() => setDragOverSidebar(null)}
+            isDragTarget={dragOverSidebar === 'right' && dragSource !== 'right'}
+          >
             {rightPanelOrder.map((panelId) => (
               <DraggablePanel
                 key={panelId}
@@ -286,6 +336,23 @@ export const ResearchDashboard = memo(function ResearchDashboard() {
                 {renderPanelContent(panelId)}
               </DraggablePanel>
             ))}
+            
+            {/* Drop zone for empty area */}
+            {draggedPanel && dragSource === 'left' && (
+              <div
+                className="min-h-[100px] flex items-center justify-center border-2 border-dashed border-blue-500/50 rounded bg-blue-500/5 text-blue-400 text-sm"
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setDragOverSidebar('right');
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  handleSidebarDrop('right');
+                }}
+              >
+                Drop panel here
+              </div>
+            )}
           </ResizablePanel>
         </div>
         
