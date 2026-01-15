@@ -1,3 +1,9 @@
+> **🚧 Work In Progress: Active Engineering Sprint**
+>
+> This project is currently under active development. Core features are functional but APIs and data structures are subject to rapid iteration. Not yet ready for stable deployment.
+
+
+
 <img width="300" alt="logo" src="https://github.com/user-attachments/assets/87525c02-0301-4421-850f-06f96584b9df" />
 
 # PHANTOM LOOP
