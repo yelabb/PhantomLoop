@@ -1,5 +1,4 @@
 import { memo, useState, useRef, type DragEvent } from 'react';
-import { motion } from 'framer-motion';
 
 interface DraggablePanelProps {
   id: string;
@@ -61,7 +60,7 @@ export const DraggablePanel = memo(function DraggablePanel({
   return (
     <div
       ref={dragRef}
-      className={`dashboard-card overflow-hidden transition-all duration-200 mb-4 ${
+      className={`bg-gray-900/95 backdrop-blur-sm border border-gray-700/50 rounded-lg transition-all duration-200 ${
         isDragging ? 'opacity-50 scale-95' : ''
       } ${isDragOver ? 'ring-2 ring-blue-500 shadow-lg shadow-blue-500/50' : ''}`}
       draggable
@@ -88,17 +87,9 @@ export const DraggablePanel = memo(function DraggablePanel({
         </span>
       </div>
 
-      <motion.div
-        initial={false}
-        animate={{ 
-          height: isOpen ? 'auto' : 0,
-          opacity: isOpen ? 1 : 0
-        }}
-        transition={{ duration: 0.2 }}
-        style={{ overflow: 'hidden' }}
-      >
-        <div className="p-3 pt-0">{children}</div>
-      </motion.div>
+      {isOpen && (
+        <div className="px-3 pb-3">{children}</div>
+      )}
     </div>
   );
 });

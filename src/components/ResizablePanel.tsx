@@ -82,9 +82,9 @@ export const ResizablePanel = memo(function ResizablePanel({
   return (
     <aside
       ref={panelRef}
-      className={`dashboard-sidebar shrink-0 overflow-y-auto relative transition-all duration-200 ${className} ${
+      className={`shrink-0 overflow-hidden relative transition-all duration-200 flex flex-col ${className} ${
         isDragTarget ? 'bg-blue-500/10 border-blue-500' : ''
-      }`}
+      } bg-gray-950/95 backdrop-blur-sm border-r border-gray-800/70`}
       style={{ width: `${width}px` }}
       onDragOver={(e) => {
         e.preventDefault();
@@ -92,7 +92,9 @@ export const ResizablePanel = memo(function ResizablePanel({
       }}
       onDragLeave={onPanelDragLeave}
     >
-      {children}
+      <div className="flex-1 overflow-y-auto overflow-x-hidden flex flex-col gap-4 px-4 py-4 pr-2 min-h-0">
+        {children}
+      </div>
       
       {/* Resize handle */}
       <div

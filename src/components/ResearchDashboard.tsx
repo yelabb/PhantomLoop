@@ -74,13 +74,14 @@ export const ResearchDashboard = memo(function ResearchDashboard() {
   const updateAccuracy = useStore((state) => state.updateAccuracy);
   
   // Panel ordering state with localStorage persistence
+  const allPanels: PanelId[] = ['decoder', 'temporal', 'accuracy', 'waterfall', 'grid', 'stats'];
   const [leftPanelOrder, setLeftPanelOrder] = useState<PanelId[]>(() => {
     const saved = localStorage.getItem('phantomloop-left-panels');
-    return saved ? JSON.parse(saved) : ['decoder'];
+    return saved ? JSON.parse(saved) : ['decoder', 'temporal', 'stats'];
   });
   const [rightPanelOrder, setRightPanelOrder] = useState<PanelId[]>(() => {
     const saved = localStorage.getItem('phantomloop-right-panels');
-    return saved ? JSON.parse(saved) : ['temporal', 'accuracy', 'waterfall', 'grid', 'stats'];
+    return saved ? JSON.parse(saved) : ['accuracy', 'waterfall', 'grid'];
   });
   const [draggedPanel, setDraggedPanel] = useState<PanelId | null>(null);
   const [dragSource, setDragSource] = useState<'left' | 'right' | null>(null);
@@ -96,9 +97,30 @@ export const ResearchDashboard = memo(function ResearchDashboard() {
   }, [rightPanelOrder]);
 
   useEffect(() => {
-    setRightPanelOrder((current) => {
-      if (current.includes('temporal')) return current;
-      return ['temporal', ...current];
+    // Ensure all panels exist and balance between sidebars
+    setLeftPanelOrder((left) => {
+      const right = rightPanelOrder;
+      const combined = new Set([...left, ...right]);
+      const missing = allPanels.filter((panel) => !combined.has(panel));
+      let nextLeft = [...left, ...missing];
+      let nextRight = right.filter((panel) => allPanels.includes(panel));
+
+      // Remove duplicates
+      nextLeft = nextLeft.filter((panel, idx) => nextLeft.indexOf(panel) === idx);
+      nextRight = nextRight.filter((panel, idx) => nextRight.indexOf(panel) === idx && !nextLeft.includes(panel));
+
+      // Balance if one side is overloaded
+      while (nextLeft.length - nextRight.length > 1) {
+        const moved = nextLeft.pop();
+        if (moved) nextRight.unshift(moved);
+      }
+      while (nextRight.length - nextLeft.length > 1) {
+        const moved = nextRight.shift();
+        if (moved) nextLeft.push(moved);
+      }
+
+      setRightPanelOrder(nextRight);
+      return nextLeft;
     });
   }, []);
   
