@@ -94,6 +94,10 @@ export const ResearchDashboard = memo(function ResearchDashboard() {
     const saved = localStorage.getItem('phantomloop-right-panels-v2');
     return saved ? JSON.parse(saved) : ['accuracy', 'manifold', 'spectral', 'correlation', 'stats'];
   });
+  const [lockedPanels, setLockedPanels] = useState<Set<PanelId>>(() => {
+    const saved = localStorage.getItem('phantomloop-locked-panels');
+    return saved ? new Set(JSON.parse(saved)) : new Set(allPanels);
+  });
   const [draggedPanel, setDraggedPanel] = useState<PanelId | null>(null);
   const [dragSource, setDragSource] = useState<'left' | 'right' | null>(null);
   const [dragOverSidebar, setDragOverSidebar] = useState<'left' | 'right' | null>(null);
@@ -106,6 +110,22 @@ export const ResearchDashboard = memo(function ResearchDashboard() {
   useEffect(() => {
     localStorage.setItem('phantomloop-right-panels-v2', JSON.stringify(rightPanelOrder));
   }, [rightPanelOrder]);
+
+  useEffect(() => {
+    localStorage.setItem('phantomloop-locked-panels', JSON.stringify([...lockedPanels]));
+  }, [lockedPanels]);
+
+  const handleToggleLock = (panelId: PanelId) => {
+    setLockedPanels((prev) => {
+      const next = new Set(prev);
+      if (next.has(panelId)) {
+        next.delete(panelId);
+      } else {
+        next.add(panelId);
+      }
+      return next;
+    });
+  };
 
   useEffect(() => {
     // Ensure all panels exist and balance between sidebars
@@ -374,6 +394,8 @@ export const ResearchDashboard = memo(function ResearchDashboard() {
                 onDrop={(targetId) => handleDrop(targetId as PanelId, 'left')}
                 isDragging={draggedPanel === panelId}
                 defaultOpen={true}
+                isLocked={lockedPanels.has(panelId)}
+                onToggleLock={(id) => handleToggleLock(id as PanelId)}
               >
                 {renderPanelContent(panelId)}
               </DraggablePanel>
@@ -410,6 +432,8 @@ export const ResearchDashboard = memo(function ResearchDashboard() {
                 onDrop={(targetId) => handleDrop(targetId as PanelId, 'right')}
                 isDragging={draggedPanel === panelId}
                 defaultOpen={true}
+                isLocked={lockedPanels.has(panelId)}
+                onToggleLock={(id) => handleToggleLock(id as PanelId)}
               >
                 {renderPanelContent(panelId)}
               </DraggablePanel>
