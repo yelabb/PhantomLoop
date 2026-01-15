@@ -6,7 +6,7 @@
 **The Neural Gauntlet: Closed-Loop Validation Infrastructure**
 
 [![PhantomLink Core](https://img.shields.io/badge/Powered_by-PhantomLink_Core-009688.svg)](https://github.com/yelabb/PhantomLink)
-[![Live Demo](https://img.shields.io/badge/🚀_Live_Demo-phantomlink.fly.dev-blue.svg)](https://phantomlink.fly.dev)
+[![Live Demo](https://img.shields.io/badge/🚀_Live_Demo-phantom-loop.fly.dev-blue.svg)](https://phantom-loop.vercel.app)
 [![WebGL](https://img.shields.io/badge/WebGL-R3F-black.svg)](https://docs.pmnd.rs/react-three-fiber)
 
 > Phantom Loop is not just a visualizer. It is a **hostile environment** for BCI decoders.
@@ -275,6 +275,7 @@ MIT License
 **Built for the BCI community** 🧠⚡
 
 *"Close the loop. Collapse the triangle. Master the gauntlet."*
+
 
 
 
