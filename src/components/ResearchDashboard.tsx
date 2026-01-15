@@ -333,6 +333,103 @@ export const ResearchDashboard = memo(function ResearchDashboard() {
     spectral: 'Spectral Analysis',
     correlation: 'Correlation Matrix',
   };
+
+  // Panel help texts - Contextual explanations for each panel
+  const panelHelpTexts: Record<PanelId, string> = {
+    decoder: `Select a neural decoder to process incoming spike data.
+
+• Neural Networks: TensorFlow.js models (LSTM, Dense, etc.) that predict cursor position from neural activity
+• Baselines: Simple JavaScript decoders for comparison (PCA, linear regression)
+• Custom Models: Load your own TensorFlow.js model from URL
+
+The decoder latency shows real-time inference speed. GPU acceleration is used when available.`,
+    
+    temporal: `Time-travel debugging for neural data streams.
+
+• Scrub through recorded packets to replay past neural activity
+• Step frame-by-frame or jump ±1 second
+• Set replay range to loop a specific segment
+• Capture snapshots to compare decoder behavior at different times
+• View realtime delta (Δ) between current position and live stream
+
+Use this to analyze decoder errors at specific moments.`,
+    
+    accuracy: `Track decoder accuracy over time with a rolling sparkline.
+
+• Green line: Accuracy (0-100%) based on distance between decoded and ground truth positions
+• Error histogram: Distribution of errors over recent samples
+• Samples with zero coordinates are excluded (initialization/missing data)
+
+Higher accuracy = decoder predictions closer to actual cursor position.`,
+    
+    waterfall: `Scrolling heatmap of neural activity over time.
+
+Each vertical column represents one time step. Each row represents one neuron. Color intensity shows spike count:
+• Dark = no spikes
+• Bright green = high firing rate
+
+Useful for spotting patterns, oscillations, or bursts in population activity.`,
+    
+    grid: `GitHub-style contribution grid for neuron activity.
+
+Each cell represents one neuron:
+• Dark gray = inactive (0 spikes)
+• Green shades = active (brighter = more spikes)
+
+Quick overview of which neurons are currently firing and their relative activity levels.`,
+    
+    stats: `Real-time performance metrics at a glance.
+
+• FPS: Visualization frame rate
+• Network Latency: WebSocket round-trip time (ms)
+• Decoder Latency: Neural network inference time (ms)
+• Dropped Packets: Data transmission losses
+
+Green = healthy, Yellow = warning, Red = critical.`,
+    
+    dynamics: `Advanced neural dynamics visualization with interactive controls.
+
+• Pan and zoom to explore neural trajectories
+• Toggle fullscreen for detailed analysis
+• Shows temporal evolution of population neural activity
+• Useful for identifying neural states and transitions`,
+    
+    raster: `Classic spike raster plot showing individual spike times.
+
+• Each row = one neuron
+• Each dot = one spike event
+• Time flows left to right
+
+Essential for visualizing precise spike timing patterns across the neural population. Click fullscreen for detailed analysis.`,
+    
+    manifold: `Neural population dynamics in reduced dimensionality space (PCA-style).
+
+• Each point = one moment's population state
+• Trail shows recent trajectory through neural state space
+• Reveals low-dimensional structure in high-dimensional neural activity
+
+Useful for identifying distinct neural states and transitions during movement.`,
+    
+    spectral: `Frequency band power analysis of neural signals.
+
+Shows power in standard frequency bands:
+• Delta (0.5-4 Hz): Slow oscillations
+• Theta (4-8 Hz): Movement-related rhythms
+• Alpha (8-13 Hz): Idle/attention states
+• Beta (13-30 Hz): Motor planning
+• Gamma (30-100 Hz): Active processing
+
+Real-time spectrogram shows frequency content over time.`,
+    
+    correlation: `Cross-neuron correlation heatmap.
+
+Shows functional connectivity between neuron pairs:
+• Red = positive correlation (fire together)
+• Blue = negative correlation (anti-correlated)
+• Gray = no relationship
+
+Reveals neural ensembles and functional groups. Hover for exact correlation values.`,
+  };
   
   // Overall system status
   const systemStatus = useMemo(() => {
@@ -389,6 +486,7 @@ export const ResearchDashboard = memo(function ResearchDashboard() {
                 key={panelId}
                 id={panelId}
                 title={panelTitles[panelId]}
+                helpText={panelHelpTexts[panelId]}
                 onDragStart={() => handleDragStart(panelId, 'left')}
                 onDragEnd={handleDragEnd}
                 onDrop={(targetId) => handleDrop(targetId as PanelId, 'left')}
@@ -427,6 +525,7 @@ export const ResearchDashboard = memo(function ResearchDashboard() {
                 key={panelId}
                 id={panelId}
                 title={panelTitles[panelId]}
+                helpText={panelHelpTexts[panelId]}
                 onDragStart={() => handleDragStart(panelId, 'right')}
                 onDragEnd={handleDragEnd}
                 onDrop={(targetId) => handleDrop(targetId as PanelId, 'right')}
