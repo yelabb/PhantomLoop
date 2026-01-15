@@ -270,10 +270,12 @@ export const ResearchDashboard = memo(function ResearchDashboard() {
         {/* Top Header Bar */}
         <header className="dashboard-header flex items-center justify-between shrink-0">
           <div className="flex items-center gap-4">
-            <div className="flex flex-col">
-              <h1 className="text-lg font-bold text-white tracking-tight">
-                PHANTOM LOOP
-              </h1>
+            <div className="flex items-center gap-3">
+              <img 
+                src="/logo.png" 
+                alt="PhantomLoop" 
+                className="h-12 w-auto object-contain"
+              />
               <p className="text-[10px] text-gray-500 tracking-wider uppercase">
                 Neural Analysis Platform
               </p>
