@@ -8,6 +8,12 @@ import { AccuracyGauge } from './visualization/AccuracyGauge';
 import { QuickStats } from './visualization/QuickStats';
 import { NeuronActivityGrid } from './visualization/NeuronActivityGrid';
 import { NeuralWaterfall } from './visualization/NeuralWaterfall';
+// Advanced Research Panels
+import { NeuralDynamicsPanel } from './visualization/NeuralDynamicsPanel';
+import { SpikeRasterPlot } from './visualization/SpikeRasterPlot';
+import { PopulationDynamics } from './visualization/PopulationDynamics';
+import { SpectralPowerPanel } from './visualization/SpectralPowerPanel';
+import { NeuronCorrelationMatrix } from './visualization/NeuronCorrelationMatrix';
 import { ConnectionStatus } from './ConnectionStatus';
 import { PlaybackControls } from './PlaybackControls';
 import { DecoderSelector } from './DecoderSelector';
@@ -18,8 +24,9 @@ import { ResizablePanel } from './ResizablePanel';
 import { useStore } from '../store';
 import { createPortal } from 'react-dom';
 
-// Panel types
-type PanelId = 'decoder' | 'temporal' | 'accuracy' | 'waterfall' | 'grid' | 'stats';
+// Panel types - Extended with new research panels
+type PanelId = 'decoder' | 'temporal' | 'accuracy' | 'waterfall' | 'grid' | 'stats' 
+  | 'dynamics' | 'raster' | 'manifold' | 'spectral' | 'correlation';
 
 // Status indicator badge
 const StatusBadge = memo(function StatusBadge({
@@ -74,14 +81,18 @@ export const ResearchDashboard = memo(function ResearchDashboard() {
   const updateAccuracy = useStore((state) => state.updateAccuracy);
   
   // Panel ordering state with localStorage persistence
-  const allPanels: PanelId[] = ['decoder', 'temporal', 'accuracy', 'waterfall', 'grid', 'stats'];
+  // Extended with new research panels for dream dashboard
+  const allPanels: PanelId[] = [
+    'decoder', 'temporal', 'accuracy', 'waterfall', 'grid', 'stats',
+    'dynamics', 'raster', 'manifold', 'spectral', 'correlation'
+  ];
   const [leftPanelOrder, setLeftPanelOrder] = useState<PanelId[]>(() => {
-    const saved = localStorage.getItem('phantomloop-left-panels');
-    return saved ? JSON.parse(saved) : ['decoder', 'temporal', 'stats'];
+    const saved = localStorage.getItem('phantomloop-left-panels-v2');
+    return saved ? JSON.parse(saved) : ['decoder', 'temporal', 'dynamics', 'raster'];
   });
   const [rightPanelOrder, setRightPanelOrder] = useState<PanelId[]>(() => {
-    const saved = localStorage.getItem('phantomloop-right-panels');
-    return saved ? JSON.parse(saved) : ['accuracy', 'waterfall', 'grid'];
+    const saved = localStorage.getItem('phantomloop-right-panels-v2');
+    return saved ? JSON.parse(saved) : ['accuracy', 'manifold', 'spectral', 'correlation', 'stats'];
   });
   const [draggedPanel, setDraggedPanel] = useState<PanelId | null>(null);
   const [dragSource, setDragSource] = useState<'left' | 'right' | null>(null);
@@ -89,11 +100,11 @@ export const ResearchDashboard = memo(function ResearchDashboard() {
   
   // Persist panel orders to localStorage
   useEffect(() => {
-    localStorage.setItem('phantomloop-left-panels', JSON.stringify(leftPanelOrder));
+    localStorage.setItem('phantomloop-left-panels-v2', JSON.stringify(leftPanelOrder));
   }, [leftPanelOrder]);
   
   useEffect(() => {
-    localStorage.setItem('phantomloop-right-panels', JSON.stringify(rightPanelOrder));
+    localStorage.setItem('phantomloop-right-panels-v2', JSON.stringify(rightPanelOrder));
   }, [rightPanelOrder]);
 
   useEffect(() => {
@@ -237,7 +248,7 @@ export const ResearchDashboard = memo(function ResearchDashboard() {
     setDragOverSidebar(null);
   };
 
-  // Panel content renderer
+  // Panel content renderer - Extended with advanced research panels
   const renderPanelContent = (panelId: PanelId) => {
     switch (panelId) {
       case 'decoder':
@@ -257,7 +268,7 @@ export const ResearchDashboard = memo(function ResearchDashboard() {
         return (
           <>
             <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">
-              Neural Dynamics
+              Neural Waterfall
             </h3>
             <NeuralWaterfall width={330} height={150} maxNeurons={96} />
           </>
@@ -273,17 +284,34 @@ export const ResearchDashboard = memo(function ResearchDashboard() {
             <QuickStats />
           </>
         );
+      // Advanced Research Panels
+      case 'dynamics':
+        return <NeuralDynamicsPanel maxNeurons={96} showControls={true} />;
+      case 'raster':
+        return <SpikeRasterPlot maxNeurons={96} timeWindowMs={5000} />;
+      case 'manifold':
+        return <PopulationDynamics maxHistory={500} trailLength={100} />;
+      case 'spectral':
+        return <SpectralPowerPanel sampleRate={60} />;
+      case 'correlation':
+        return <NeuronCorrelationMatrix maxNeurons={32} windowSize={60} />;
     }
   };
 
-  // Panel titles
+  // Panel titles - Extended with research panel names
   const panelTitles: Record<PanelId, string> = {
     decoder: 'Decoder Selection',
     temporal: 'Temporal Inspector',
     accuracy: 'Accuracy History',
-    waterfall: 'Neural Dynamics',
-    grid: 'Neuron Activity',
+    waterfall: 'Neural Waterfall',
+    grid: 'Neuron Activity Grid',
     stats: 'Live Metrics',
+    // Advanced Research Panels
+    dynamics: 'Neural Dynamics',
+    raster: 'Spike Raster',
+    manifold: 'Population Manifold',
+    spectral: 'Spectral Analysis',
+    correlation: 'Correlation Matrix',
   };
   
   // Overall system status
