@@ -1,4 +1,4 @@
-import { memo, useState, useRef, useEffect, ReactNode } from 'react';
+import { memo, useState, useRef, useEffect, type ReactNode } from 'react';
 
 interface ResizablePanelProps {
   children: ReactNode;

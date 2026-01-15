@@ -9,7 +9,7 @@ export const WelcomeScreen = memo(function WelcomeScreen() {
   const connectWebSocket = useStore((state) => state.connectWebSocket);
   const connectionError = useStore((state) => state.connectionError);
   
-  const [serverUrl, setServerUrl] = useState(SERVER_CONFIG.BASE_URL);
+  const [serverUrl, setServerUrl] = useState<string>(SERVER_CONFIG.BASE_URL);
   const [sessionInput, setSessionInput] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);

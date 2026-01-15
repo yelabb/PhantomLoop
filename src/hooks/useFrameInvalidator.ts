@@ -2,7 +2,7 @@
 // This works with Canvas frameloop="demand" for optimal performance
 
 import { useEffect, useRef } from 'react';
-import { useThree } from '@react-three/fiber';
+// import { useThree } from '@react-three/fiber';
 
 /**
  * Invalidates the Three.js frame at a controlled rate
@@ -10,7 +10,7 @@ import { useThree } from '@react-three/fiber';
  * @param targetFPS - Target frames per second (default: 60)
  */
 export function useFrameInvalidator(targetFPS: number = 60) {
-  const { invalidate } = useThree();
+  // const { invalidate } = useThree();
   const frameRef = useRef<number>(0);
   const lastTimeRef = useRef(0);
   const frameInterval = 1000 / targetFPS;
@@ -21,7 +21,7 @@ export function useFrameInvalidator(targetFPS: number = 60) {
 
       if (elapsed >= frameInterval) {
         lastTimeRef.current = time - (elapsed % frameInterval);
-        invalidate();
+        // invalidate();
       }
 
       frameRef.current = requestAnimationFrame(animate);
@@ -34,5 +34,5 @@ export function useFrameInvalidator(targetFPS: number = 60) {
         cancelAnimationFrame(frameRef.current);
       }
     };
-  }, [invalidate, frameInterval]);
+  }, [frameInterval]);
 }

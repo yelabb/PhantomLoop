@@ -351,7 +351,7 @@ export const AddDecoderModal = memo(function AddDecoderModal({ isOpen, onClose }
       {/* Help text */}
       {!isFullScreen && (
       <div className="mt-3 pt-3 border-t border-gray-700/50">
-        {sourceType === 'code' ? (
+        {sourceType === 'url' ? (
           <>
             <p className="text-xs text-gray-500 leading-relaxed">
               <strong className="text-gray-400">Build Custom Models:</strong> Use TensorFlow.js API to create, 

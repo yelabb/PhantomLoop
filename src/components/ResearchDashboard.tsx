@@ -2,7 +2,7 @@
 // Clear at-a-glance decoder performance with deep drill-down capability
 
 import { memo, useState, useMemo, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { CenterOutArena } from './visualization/CenterOutArena';
 import { AccuracyGauge } from './visualization/AccuracyGauge';
 import { QuickStats } from './visualization/QuickStats';
