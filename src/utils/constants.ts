@@ -24,6 +24,13 @@ export const STREAM_CONFIG = {
   MAX_RECONNECT_ATTEMPTS: 5,
 } as const;
 
+// Timeline/temporal analysis configuration
+export const TIMELINE_CONFIG = {
+  HISTORY_SECONDS: 30,
+  HISTORY_SIZE: 40 * 30, // 30 seconds of data at 40Hz
+  SNAPSHOT_LIMIT: 8,
+} as const;
+
 // Performance thresholds
 export const PERFORMANCE_THRESHOLDS = {
   TARGET_FPS: 60,

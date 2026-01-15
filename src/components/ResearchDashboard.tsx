@@ -11,6 +11,7 @@ import { NeuralWaterfall } from './visualization/NeuralWaterfall';
 import { ConnectionStatus } from './ConnectionStatus';
 import { PlaybackControls } from './PlaybackControls';
 import { DecoderSelector } from './DecoderSelector';
+import { TemporalInspector } from './TemporalInspector';
 import { DecoderLoadingOverlay } from './LoadingStates';
 import { DraggablePanel } from './DraggablePanel';
 import { ResizablePanel } from './ResizablePanel';
@@ -18,7 +19,7 @@ import { useStore } from '../store';
 import { createPortal } from 'react-dom';
 
 // Panel types
-type PanelId = 'decoder' | 'accuracy' | 'waterfall' | 'grid' | 'stats';
+type PanelId = 'decoder' | 'temporal' | 'accuracy' | 'waterfall' | 'grid' | 'stats';
 
 // Status indicator badge
 const StatusBadge = memo(function StatusBadge({
@@ -79,7 +80,7 @@ export const ResearchDashboard = memo(function ResearchDashboard() {
   });
   const [rightPanelOrder, setRightPanelOrder] = useState<PanelId[]>(() => {
     const saved = localStorage.getItem('phantomloop-right-panels');
-    return saved ? JSON.parse(saved) : ['accuracy', 'waterfall', 'grid', 'stats'];
+    return saved ? JSON.parse(saved) : ['temporal', 'accuracy', 'waterfall', 'grid', 'stats'];
   });
   const [draggedPanel, setDraggedPanel] = useState<PanelId | null>(null);
   const [dragSource, setDragSource] = useState<'left' | 'right' | null>(null);
@@ -93,6 +94,13 @@ export const ResearchDashboard = memo(function ResearchDashboard() {
   useEffect(() => {
     localStorage.setItem('phantomloop-right-panels', JSON.stringify(rightPanelOrder));
   }, [rightPanelOrder]);
+
+  useEffect(() => {
+    setRightPanelOrder((current) => {
+      if (current.includes('temporal')) return current;
+      return ['temporal', ...current];
+    });
+  }, []);
   
   // Calculate and update accuracy continuously
   useEffect(() => {
@@ -212,6 +220,8 @@ export const ResearchDashboard = memo(function ResearchDashboard() {
     switch (panelId) {
       case 'decoder':
         return <DecoderSelector />;
+      case 'temporal':
+        return <TemporalInspector />;
       case 'accuracy':
         return (
           <>
@@ -247,6 +257,7 @@ export const ResearchDashboard = memo(function ResearchDashboard() {
   // Panel titles
   const panelTitles: Record<PanelId, string> = {
     decoder: 'Decoder Selection',
+    temporal: 'Temporal Inspector',
     accuracy: 'Accuracy History',
     waterfall: 'Neural Dynamics',
     grid: 'Neuron Activity',
