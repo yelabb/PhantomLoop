@@ -1,0 +1,8 @@
+{
+  "timestamp": 1705398000000,
+  "trial_id": 1,
+  "target_position": [150, 0],
+  "spike_counts": [0, 1, 2, 0, 1, 0, 0, 3, 1, 0, 0, 2, 1, 0, 0, 0, 1, 2, 0, 0],
+  "sample_index": 0,
+  "playback_speed": 1.0
+}

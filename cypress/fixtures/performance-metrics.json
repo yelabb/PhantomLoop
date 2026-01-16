@@ -1,0 +1,9 @@
+{
+  "fps": 60,
+  "latency_ms": 15,
+  "packet_rate": 100,
+  "decode_time_ms": 8,
+  "render_time_ms": 5,
+  "memory_usage_mb": 128,
+  "cpu_usage_percent": 25
+}

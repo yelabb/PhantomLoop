@@ -1,0 +1,14 @@
+{
+  "decoder_id": "linear_decoder",
+  "decoder_name": "Linear Decoder",
+  "decoder_type": "linear",
+  "parameters": {
+    "learning_rate": 0.01,
+    "regularization": 0.001
+  },
+  "metrics": {
+    "accuracy": 0.85,
+    "latency_ms": 12,
+    "error_rate": 0.15
+  }
+}
