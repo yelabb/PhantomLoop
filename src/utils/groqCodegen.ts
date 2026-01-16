@@ -74,7 +74,7 @@ Generate clean, production-ready code.`;
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'mixtral-8x7b-32768', // Fast and powerful
+        model: 'llama-3.3-70b-versatile', // Fast and powerful
         messages: [
           { role: 'system', content: SYSTEM_PROMPT },
           { role: 'user', content: userPrompt }
