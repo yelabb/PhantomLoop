@@ -14,6 +14,22 @@
 [![React 19](https://img.shields.io/badge/React-19-blue.svg)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue.svg)](https://www.typescriptlang.org/)
 
+---
+
+## 🔗 Part of the Phantom Suite
+
+PhantomLoop is one component of the **Phantom Suite**, an integrated ecosystem for real-time brain-computer interface (BCI) research and development:
+
+| Repository | Description | Language |
+|------------|-------------|----------|
+| **[PhantomCore](https://github.com/yelabb/PhantomCore)** | High-performance C++ signal processing library for neural decoding (Kalman filters, spike detection, SIMD optimizations) | C++ |
+| **[PhantomCodec](https://github.com/yelabb/PhantomCodec)** | Ultra-low latency neural data compression codec optimized for embedded systems and real-time streaming | Rust |
+| **[PhantomLink](https://github.com/yelabb/PhantomLink)** | Python backend server for neural data streaming, dataset management, and WebSocket communication | Python |
+| **[PhantomLoop](https://github.com/yelabb/PhantomLoop)** ← *You are here* | Real-time web-based visualization dashboard for BCI decoder testing and validation | TypeScript/React |
+
+
+---
+
 > A research-grade dashboard for visualizing and validating BCI decoder performance in real-time.
 
 PhantomLoop streams neural data from PhantomLink (MC_Maze dataset, 142 channels @ 40Hz) and visualizes **ground truth cursor movements** alongside **your decoder's predictions**. Built for BCI researchers who need to rapidly prototype, test, and compare decoding algorithms.
