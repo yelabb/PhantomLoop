@@ -3,7 +3,7 @@
  * Tests the neural decoder algorithms and their mathematical correctness
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import {
   passthroughDecoder,
   delayedDecoder,
@@ -19,7 +19,7 @@ function createDecoderFn(code: string): (input: DecoderInput) => { x: number; y:
 }
 
 // Mock decoder input
-function createMockInput(overrides?: Partial<DecoderInput> & { history?: Array<{ x: number; y: number }> }): DecoderInput & { history?: Array<{ x: number; y: number }> } {
+function createMockInput(overrides?: Partial<DecoderInput>): DecoderInput {
   return {
     kinematics: {
       x: 50,
@@ -129,8 +129,8 @@ describe('Baseline Decoders', () => {
       const input = createMockInput({
         kinematics: { x: 50, y: 60, vx: 0, vy: 0 },
         history: [
-          { x: 10, y: 10 },
-          { x: 20, y: 20 },
+          { x: 10, y: 10, latency: 0 },
+          { x: 20, y: 20, latency: 0 },
         ],
       });
 
@@ -142,11 +142,11 @@ describe('Baseline Decoders', () => {
     it('should return delayed position with sufficient history', () => {
       const fn = createDecoderFn(delayedDecoder.code!);
       const history = [
-        { x: 10, y: 10 },
-        { x: 20, y: 20 },
-        { x: 30, y: 30 },
-        { x: 40, y: 40 },
-        { x: 50, y: 50 },
+        { x: 10, y: 10, latency: 0 },
+        { x: 20, y: 20, latency: 0 },
+        { x: 30, y: 30, latency: 0 },
+        { x: 40, y: 40, latency: 0 },
+        { x: 50, y: 50, latency: 0 },
       ];
       const input = createMockInput({
         kinematics: { x: 60, y: 60, vx: 0, vy: 0 },
