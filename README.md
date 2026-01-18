@@ -98,6 +98,32 @@ npm run build
 npm run preview
 ```
 
+## 🚀 Deployment
+
+### Deploy to Vercel (Recommended)
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/yelabb/PhantomLoop)
+
+1. Fork this repository
+2. Connect to Vercel: `vercel --prod`
+3. Or use the button above for one-click deploy
+
+### Deploy to Netlify
+
+[![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/yelabb/PhantomLoop)
+
+1. Push to GitHub
+2. Connect to Netlify
+3. Build command: `npm run build`
+4. Publish directory: `dist`
+
+### Deploy to Cloudflare Pages
+
+```bash
+npm run build
+npx wrangler pages deploy dist
+```
+
 ## 🏗 Tech Stack
 
 - **React 19** + TypeScript + Vite 7

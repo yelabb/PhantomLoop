@@ -1,0 +1,9 @@
+node_modules
+.git
+.vscode
+*.log
+.env.local
+.env.*.local
+cypress/videos
+cypress/screenshots
+coverage
