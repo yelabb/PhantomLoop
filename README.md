@@ -455,6 +455,19 @@ MIT License
 
 ---
 
+## 🙏 Acknowledgments
+
+This project was developed with assistance from AI coding assistants and workflows:
+- Claude Opus 4.5 (Anthropic)
+- Claude Sonnet 4.5 (Anthropic)
+- Grok code fast 1 (xAi)
+- Gemini 3.0 Pro (Google)
+
+
+All code was tested and validated by the author.
+
+---
+
 **Built for the BCI research community** 🧠⚡
 
 *"Visualize. Decode. Validate. Iterate."*
