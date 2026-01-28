@@ -14,9 +14,6 @@ export const NeuralWaterfall = memo(function NeuralWaterfall({
 }: NeuralWaterfallProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const currentPacket = useStore((state) => state.currentPacket);
-  
-  // Use a ref to keep track of the scroll position/data without triggering re-renders
-  const scrollOffset = useRef(0);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -80,7 +77,7 @@ export const NeuralWaterfall = memo(function NeuralWaterfall({
             style={{ imageRendering: 'pixelated' }}
         />
         <div className="absolute top-2 left-2 px-2 py-1 bg-gray-900/80 border border-gray-700/50">
-            <span className="text-[10px] font-mono text-gray-400">NEURAL_WATERFALL // T-{scrollOffset.current}</span>
+            <span className="text-[10px] font-mono text-gray-400">NEURAL_WATERFALL</span>
         </div>
     </div>
   );

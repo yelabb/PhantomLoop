@@ -191,9 +191,14 @@ const ErrorLine = memo(function ErrorLine({
 export const CenterOutArena = memo(function CenterOutArena() {
   const currentPacket = useStore((state) => state.currentPacket);
   const decoderOutput = useStore((state) => state.decoderOutput);
+  const dataSource = useStore((state) => state.dataSource);
+  
+  // Check if we have ground truth data
+  const hasGroundTruth = dataSource?.type !== 'esp-eeg';
   
   // Active target (based on intention)
   const activeTarget = useMemo(() => {
+    if (!hasGroundTruth) return null;
     if (!currentPacket?.data?.intention) return null;
     
     const { target_x, target_y } = currentPacket.data.intention;
@@ -212,14 +217,15 @@ export const CenterOutArena = memo(function CenterOutArena() {
     }
     
     return minDist < 50 ? closest : null;
-  }, [currentPacket?.data?.intention]);
+  }, [currentPacket?.data?.intention, hasGroundTruth]);
   
   // Ground truth position (BioLink)
   const groundTruthPos = useMemo(() => {
+    if (!hasGroundTruth) return { x: CENTER, y: CENTER };
     if (!currentPacket?.data?.kinematics) return { x: CENTER, y: CENTER };
     const { x, y } = currentPacket.data.kinematics;
     return toArenaCoords(x, y);
-  }, [currentPacket]);
+  }, [currentPacket, hasGroundTruth]);
   
   // Decoded position (LoopBack)
   const decodedPos = useMemo(() => {
@@ -229,9 +235,63 @@ export const CenterOutArena = memo(function CenterOutArena() {
   
   // Error calculation (normalized 0-1)
   const error = useMemo(() => {
+    if (!hasGroundTruth) return 0;
     const d = distance(groundTruthPos, decodedPos);
     return Math.min(d / (ARENA_SIZE / 2), 1);
-  }, [groundTruthPos, decodedPos]);
+  }, [groundTruthPos, decodedPos, hasGroundTruth]);
+  
+  // ESP-EEG mode: Show placeholder for EEG visualization
+  if (!hasGroundTruth) {
+    return (
+      <div 
+        className="relative rounded-2xl overflow-hidden flex flex-col items-center justify-center"
+        style={{ 
+          width: ARENA_SIZE, 
+          height: ARENA_SIZE,
+          background: 'radial-gradient(circle at center, #1a1a2e 0%, #0f0f1a 100%)',
+          boxShadow: 'inset 0 0 60px rgba(0,0,0,0.5), 0 0 40px rgba(0,0,0,0.3)',
+        }}
+      >
+        {/* EEG Wave Animation */}
+        <svg className="absolute inset-0 w-full h-full opacity-20">
+          <defs>
+            <linearGradient id="eegGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#06b6d4" stopOpacity="0" />
+              <stop offset="50%" stopColor="#06b6d4" stopOpacity="1" />
+              <stop offset="100%" stopColor="#06b6d4" stopOpacity="0" />
+            </linearGradient>
+          </defs>
+          {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
+            <path
+              key={i}
+              d={`M 0 ${160 + i * 40} Q ${ARENA_SIZE / 4} ${140 + i * 40 + Math.sin(i * 0.8) * 20}, ${ARENA_SIZE / 2} ${160 + i * 40} T ${ARENA_SIZE} ${160 + i * 40}`}
+              fill="none"
+              stroke="url(#eegGradient)"
+              strokeWidth="2"
+              opacity={0.3 + (i % 3) * 0.2}
+            />
+          ))}
+        </svg>
+        
+        <div className="relative z-10 text-center">
+          <div className="text-6xl mb-4">🧠</div>
+          <h3 className="text-xl font-semibold text-white mb-2">ESP-EEG Mode</h3>
+          <p className="text-gray-400 text-sm max-w-xs">
+            8-channel EEG visualization
+          </p>
+          <p className="text-gray-500 text-xs mt-2">
+            No cursor task — view signals in the Electrode Placement screen
+          </p>
+          <div className="mt-6 flex items-center justify-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-biolink animate-pulse" />
+            <span className="text-biolink text-sm font-medium">
+              Streaming EEG Data
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  }
   
   return (
     <div 

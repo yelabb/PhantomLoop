@@ -1,7 +1,7 @@
 // Research Dashboard - Optimized visualization for BCI researchers
 // Clear at-a-glance decoder performance with deep drill-down capability
 
-import { memo, useState, useMemo, useEffect } from 'react';
+import { memo, useState, useMemo, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { CenterOutArena } from './visualization/CenterOutArena';
 import { AccuracyGauge } from './visualization/AccuracyGauge';
@@ -71,7 +71,11 @@ const GlobalLoadingOverlay = memo(function GlobalLoadingOverlay() {
   );
 });
 
-export const ResearchDashboard = memo(function ResearchDashboard() {
+interface ResearchDashboardProps {
+  onConfigureElectrodes?: () => void;
+}
+
+export const ResearchDashboard = memo(function ResearchDashboard({ onConfigureElectrodes }: ResearchDashboardProps) {
   const isConnected = useStore((state) => state.isConnected);
   const totalLatency = useStore((state) => state.totalLatency);
   const currentAccuracy = useStore((state) => state.currentAccuracy);
@@ -79,6 +83,19 @@ export const ResearchDashboard = memo(function ResearchDashboard() {
   const currentPacket = useStore((state) => state.currentPacket);
   const decoderOutput = useStore((state) => state.decoderOutput);
   const updateAccuracy = useStore((state) => state.updateAccuracy);
+  const dataSource = useStore((state) => state.dataSource);
+  
+  // List of EEG device types that don't have ground truth (no cursor task)
+  const eegDeviceTypes = [
+    'esp-eeg', 'cerelog-esp-eeg', 'openbci-cyton', 'openbci-cyton-daisy', 'openbci-ganglion',
+    'neurosky-mindwave', 'muse-2', 'muse-s', 'emotiv-insight', 'emotiv-epoc-x', 'brainflow-generic'
+  ];
+  
+  // Determine if current data source has ground truth for accuracy metrics
+  const hasGroundTruth = dataSource?.type ? !eegDeviceTypes.includes(dataSource.type) : true;
+  
+  // Show electrode placement only for EEG devices (not PhantomLink)
+  const isEEGDevice = dataSource?.type ? eegDeviceTypes.includes(dataSource.type) : false;
   
   // Panel ordering state with localStorage persistence
   // Extended with new research panels for dream dashboard
@@ -127,14 +144,22 @@ export const ResearchDashboard = memo(function ResearchDashboard() {
     });
   };
 
+  // Panel balancing - runs once on mount
+  // Using useRef to track if already balanced avoids needing allPanels in deps
+  const hasBalanced = useRef(false);
   useEffect(() => {
+    if (hasBalanced.current) return;
+    hasBalanced.current = true;
+    
+    // Get panel lists from current state
+    const currentAllPanels = allPanels;
+    
     // Ensure all panels exist and balance between sidebars
     setLeftPanelOrder((left) => {
-      const right = rightPanelOrder;
-      const combined = new Set([...left, ...right]);
-      const missing = allPanels.filter((panel) => !combined.has(panel));
+      const combined = new Set([...left, ...rightPanelOrder]);
+      const missing = currentAllPanels.filter((panel) => !combined.has(panel));
       let nextLeft = [...left, ...missing];
-      let nextRight = right.filter((panel) => allPanels.includes(panel));
+      let nextRight = rightPanelOrder.filter((panel) => currentAllPanels.includes(panel));
 
       // Remove duplicates
       nextLeft = nextLeft.filter((panel, idx) => nextLeft.indexOf(panel) === idx);
@@ -153,6 +178,7 @@ export const ResearchDashboard = memo(function ResearchDashboard() {
       setRightPanelOrder(nextRight);
       return nextLeft;
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   
   // Calculate and update accuracy continuously
@@ -276,12 +302,23 @@ export const ResearchDashboard = memo(function ResearchDashboard() {
       case 'temporal':
         return <TemporalInspector />;
       case 'accuracy':
-        return (
+        return hasGroundTruth ? (
           <>
             <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">
               Accuracy History
             </h3>
             <AccuracyGauge accuracy={currentAccuracy} error={currentError} />
+          </>
+        ) : (
+          <>
+            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">
+              Signal Quality
+            </h3>
+            <div className="text-center py-8 text-gray-500">
+              <div className="text-4xl mb-2">📊</div>
+              <p className="text-sm">No ground truth available</p>
+              <p className="text-xs mt-1">ESP-EEG provides signal quality metrics instead</p>
+            </div>
           </>
         );
       case 'waterfall':
@@ -460,11 +497,25 @@ Reveals neural ensembles and functional groups. Hover for exact correlation valu
             </div>
           </div>
           
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <StatusBadge
               status={systemStatus}
               label={isConnected ? `${totalLatency.toFixed(0)}ms` : 'Offline'}
             />
+            {onConfigureElectrodes && isEEGDevice && (
+              <button
+                onClick={onConfigureElectrodes}
+                className="flex items-center gap-2 px-3 py-2 text-gray-400 hover:text-white hover:bg-gray-800/80 
+                  border border-gray-700/50 hover:border-gray-600 transition-all text-sm"
+                title="Configure Electrodes (EEG Device)"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                <span>Electrode Placement</span>
+              </button>
+            )}
             <ConnectionStatus />
           </div>
         </header>

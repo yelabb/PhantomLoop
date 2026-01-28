@@ -130,6 +130,12 @@ const AccuracyIcon = () => (
   </svg>
 );
 
+const SignalIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M2 12h4l3-9 4 18 3-9h6" />
+  </svg>
+);
+
 export const QuickStats = memo(function QuickStats() {
   const totalLatency = useStore((state) => state.totalLatency);
   const decoderLatency = useStore((state) => state.decoderLatency);
@@ -139,9 +145,14 @@ export const QuickStats = memo(function QuickStats() {
   const fps = useStore((state) => state.fps);
   const currentPacket = useStore((state) => state.currentPacket);
   const decoderOutput = useStore((state) => state.decoderOutput);
+  const dataSource = useStore((state) => state.dataSource);
   
-  // Calculate accuracy from current positions
+  // Check if data source has ground truth
+  const hasGroundTruth = dataSource?.type !== 'esp-eeg';
+  
+  // Calculate accuracy from current positions (only meaningful with ground truth)
   const accuracy = useMemo(() => {
+    if (!hasGroundTruth) return 0;
     if (!currentPacket?.data?.kinematics || !decoderOutput) return 0;
     
     const { x: gtX, y: gtY } = currentPacket.data.kinematics;
@@ -150,7 +161,7 @@ export const QuickStats = memo(function QuickStats() {
     // Calculate normalized error (0-1)
     const error = Math.sqrt((gtX - decX) ** 2 + (gtY - decY) ** 2) / 200;
     return Math.max(0, 1 - error);
-  }, [currentPacket?.data?.kinematics, decoderOutput]);
+  }, [currentPacket?.data?.kinematics, decoderOutput, hasGroundTruth]);
   
   // Latency status
   const latencyStatus = totalLatency < 30 ? 'good' : totalLatency < 50 ? 'warning' : 'bad';
@@ -168,13 +179,23 @@ export const QuickStats = memo(function QuickStats() {
       
       {/* Main stats grid */}
       <div className="grid grid-cols-2 gap-3">
-        <StatCard
-          label="Accuracy"
-          value={accuracy * 100}
-          unit="%"
-          status={accuracyStatus}
-          icon={<AccuracyIcon />}
-        />
+        {hasGroundTruth ? (
+          <StatCard
+            label="Accuracy"
+            value={accuracy * 100}
+            unit="%"
+            status={accuracyStatus}
+            icon={<AccuracyIcon />}
+          />
+        ) : (
+          <StatCard
+            label="Signal"
+            value="EEG"
+            status="neutral"
+            icon={<SignalIcon />}
+            subtitle="No ground truth"
+          />
+        )}
         
         <StatCard
           label="Total Latency"

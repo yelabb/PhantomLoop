@@ -53,7 +53,7 @@ describe('Welcome Screen', () => {
                        $body.text().toLowerCase().includes('failed') ||
                        $body.text().toLowerCase().includes('server');
       
-      expect(hasLoading || hasError).to.be.true;
+      expect(hasLoading || hasError).to.equal(true);
     });
   });
 
