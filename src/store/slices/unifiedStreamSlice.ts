@@ -70,6 +70,41 @@ let sampleTimestamps: number[] = [];
 // Rate calculation window
 const RATE_WINDOW_MS = 1000;
 
+// ============================================================================
+// SUBSCRIPTION CLEANUP
+// ============================================================================
+// Store unsubscribe functions to prevent memory leaks when switching adapters
+
+let unsubscribeSample: (() => void) | null = null;
+let unsubscribeState: (() => void) | null = null;
+
+/**
+ * Clean up all active subscriptions and timers.
+ * Called when disconnecting or switching adapters.
+ */
+function cleanupSubscriptions() {
+  // Unsubscribe from adapter callbacks
+  if (unsubscribeSample) {
+    unsubscribeSample();
+    unsubscribeSample = null;
+  }
+  if (unsubscribeState) {
+    unsubscribeState();
+    unsubscribeState = null;
+  }
+  
+  // Clear throttle timer
+  if (throttleTimerId) {
+    clearTimeout(throttleTimerId);
+    throttleTimerId = null;
+  }
+  
+  // Reset pending state
+  pendingSample = null;
+  pendingGroundTruth = null;
+  pendingSampleCount = 0;
+}
+
 export const createUnifiedStreamSlice: StateCreator<
   UnifiedStreamSlice,
   [],
@@ -90,6 +125,9 @@ export const createUnifiedStreamSlice: StateCreator<
 
   setActiveStreamSource: (source: StreamSource | null) => {
     const { activeStreamSource } = get();
+    
+    // Clean up existing subscriptions BEFORE disconnecting
+    cleanupSubscriptions();
     
     // Disconnect previous source
     if (activeStreamSource) {
@@ -121,16 +159,19 @@ export const createUnifiedStreamSlice: StateCreator<
       return;
     }
     
+    // Clean up any existing subscriptions before creating new ones
+    cleanupSubscriptions();
+    
     set({ streamConnectionState: 'connecting', streamError: null });
     
     try {
-      // Subscribe to samples
-      activeStreamSource.onSample((sample, groundTruth) => {
+      // Subscribe to samples and STORE the unsubscribe function
+      unsubscribeSample = activeStreamSource.onSample((sample, groundTruth) => {
         get().receiveStreamSample(sample, groundTruth);
       });
       
-      // Subscribe to state changes
-      activeStreamSource.onStateChange((state) => {
+      // Subscribe to state changes and STORE the unsubscribe function
+      unsubscribeState = activeStreamSource.onStateChange((state) => {
         set({
           streamConnectionState: state,
           streamError: state === 'error' ? activeStreamSource.lastError : null,
@@ -141,6 +182,8 @@ export const createUnifiedStreamSlice: StateCreator<
       
       set({ streamConnectionState: 'connected' });
     } catch (error) {
+      // Clean up subscriptions on connection failure
+      cleanupSubscriptions();
       set({
         streamConnectionState: 'error',
         streamError: error instanceof Error ? error.message : 'Connection failed',
@@ -151,18 +194,12 @@ export const createUnifiedStreamSlice: StateCreator<
   disconnectStream: () => {
     const { activeStreamSource } = get();
     
+    // Clean up subscriptions and timers
+    cleanupSubscriptions();
+    
     if (activeStreamSource) {
       activeStreamSource.disconnect();
     }
-    
-    // Clear throttle timer
-    if (throttleTimerId) {
-      clearTimeout(throttleTimerId);
-      throttleTimerId = null;
-    }
-    pendingSample = null;
-    pendingGroundTruth = null;
-    pendingSampleCount = 0;
     
     set({
       streamConnectionState: 'disconnected',
@@ -215,7 +252,7 @@ export const createUnifiedStreamSlice: StateCreator<
   },
 
   clearStreamBuffer: () => {
-    // Clear throttle state
+    // Clear throttle state (but don't unsubscribe - just clearing buffer)
     if (throttleTimerId) {
       clearTimeout(throttleTimerId);
       throttleTimerId = null;
