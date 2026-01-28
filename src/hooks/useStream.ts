@@ -2,7 +2,7 @@
  * Unified Stream Hook
  * 
  * Stream-agnostic hook for connecting to and consuming neural data.
- * Works with any adapter (PhantomLink, ESP-EEG, Simulation, etc.)
+ * Works with any adapter (PhantomLink, ESP-EEG, Universal EEG, etc.)
  */
 
 import { useEffect, useCallback } from 'react';
@@ -109,7 +109,7 @@ export function useStreamToLegacyBridge() {
   useEffect(() => {
     if (!currentSample || !config) return;
     
-    // Only bridge if we have ground truth (i.e., PhantomLink or simulation with task)
+    // Only bridge if we have ground truth (i.e., PhantomLink with cursor task)
     if (!groundTruth) return;
     
     // Construct legacy packet

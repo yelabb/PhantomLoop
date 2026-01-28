@@ -34,8 +34,8 @@ export type DeviceManufacturer =
   | 'ANT Neuro'
   | 'G.Tec'
   | 'Cognionics'
-  | 'Generic'
-  | 'Simulation';
+  | 'Brainflow'
+  | 'Generic';
 
 /**
  * ADC chip types for different devices
@@ -546,12 +546,12 @@ export const DEVICE_PROFILES: Record<string, DeviceProfile> = {
   },
 
   // -------------------------------------------------------------------------
-  // Simulation/Testing
+  // Brainflow Testing
   // -------------------------------------------------------------------------
   'synthetic': {
     id: 'synthetic',
     name: 'Synthetic Board (Testing)',
-    manufacturer: 'Simulation',
+    manufacturer: 'Brainflow',
     channelCount: 8,
     samplingRates: [250, 500, 1000],
     defaultSamplingRate: 250,

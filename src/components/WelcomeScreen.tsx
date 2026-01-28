@@ -10,7 +10,7 @@ import { listDeviceProfiles, type DeviceProfile } from '../devices/deviceProfile
 type DataSourceType = 'phantomlink' | 'eeg-device';
 
 // Get all EEG device profiles for the dropdown
-const EEG_DEVICES = listDeviceProfiles().filter(d => d.manufacturer !== 'Simulation');
+const EEG_DEVICES = listDeviceProfiles();
 
 interface WelcomeScreenProps {
   onConnectToDashboard?: () => void;
@@ -411,7 +411,7 @@ export const WelcomeScreen = memo(function WelcomeScreen({ onConnectToDashboard,
                   <p className="text-xs text-gray-500">
                     Requires a local bridge to proxy device data to the browser.{' '}
                     <a
-                      href="https://github.com/yelabb/PhantomLoop/blob/main/CERELOG_INTEGRATION.md"
+                      href="https://github.com/yelabb/PhantomLoop/blob/main/EEG_INTEGRATION.md"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-biolink hover:text-biolink/80 underline"

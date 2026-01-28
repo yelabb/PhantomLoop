@@ -7,14 +7,12 @@
 import type { StreamAdapterRegistry } from '../types/stream';
 import { createPhantomLinkAdapter } from './PhantomLinkAdapter';
 import { createESPEEGAdapter } from './ESPEEGAdapter';
-import { createSimulationAdapter } from './SimulationAdapter';
 import { createUniversalEEGAdapter } from './UniversalEEGAdapter';
 import { listDeviceProfiles } from '../devices/deviceProfiles';
 
 // Re-export adapters
 export { PhantomLinkAdapter, createPhantomLinkAdapter } from './PhantomLinkAdapter';
 export { ESPEEGAdapter, createESPEEGAdapter } from './ESPEEGAdapter';
-export { SimulationAdapter, createSimulationAdapter } from './SimulationAdapter';
 export { 
   UniversalEEGAdapter, 
   createUniversalEEGAdapter, 
@@ -126,20 +124,6 @@ export const streamAdapterRegistry: StreamAdapterRegistry = {
     factory: (opts) => createUniversalEEGAdapter({ deviceId: 'synthetic', ...opts }),
     defaultUrl: 'ws://localhost:8770',
   },
-  
-  // -------------------------------------------------------------------------
-  // Simulation Modes
-  // -------------------------------------------------------------------------
-  'simulation-eeg': {
-    name: 'Simulated EEG',
-    description: 'Synthetic EEG with alpha oscillations for testing',
-    factory: () => createSimulationAdapter({ pattern: 'eeg-alpha', channelCount: 8 }),
-  },
-  'simulation-spikes': {
-    name: 'Simulated Spikes',
-    description: 'Synthetic spike counts for decoder testing',
-    factory: () => createSimulationAdapter({ pattern: 'cursor-task', channelCount: 142, samplingRate: 40 }),
-  },
 };
 
 /**
@@ -182,7 +166,7 @@ export function listAdaptersByCategory() {
     'Consumer EEG': ['neurosky-mindwave', 'muse-2', 'muse-s'],
     'Research EEG': ['emotiv-insight', 'emotiv-epoc-x'],
     'Custom Hardware': ['esp-eeg', 'cerelog-esp-eeg'],
-    'Testing': ['brainflow-synthetic', 'simulation-eeg', 'simulation-spikes'],
+    'Testing': ['brainflow-synthetic'],
   };
   
   return Object.entries(categories).map(([category, ids]) => ({

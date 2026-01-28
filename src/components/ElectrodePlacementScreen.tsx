@@ -197,7 +197,7 @@ export function ElectrodePlacementScreen({ onBack, onContinue }: ElectrodePlacem
                   <p className="text-xs text-gray-500 mt-1">
                     Connects to a local bridge that proxies TCP data from the ESP-EEG.{' '}
                     <a
-                      href="https://github.com/yelabb/PhantomLoop/blob/main/CERELOG_INTEGRATION.md"
+                      href="https://github.com/yelabb/PhantomLoop/blob/main/EEG_INTEGRATION.md"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-biolink hover:text-biolink/80 underline"

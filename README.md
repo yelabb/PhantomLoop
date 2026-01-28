@@ -348,7 +348,6 @@ src/
 ├── streams/             # Stream adapters
 │   ├── ESPEEGAdapter.ts # Cerelog ESP-EEG
 │   ├── PhantomLinkAdapter.ts
-│   ├── SimulationAdapter.ts
 │   └── UniversalEEGAdapter.ts
 ├── decoders/            # BCI decoder implementations
 │   ├── baselines.ts     # JS decoders
@@ -491,7 +490,7 @@ Check console on startup:
 ## 📚 Resources
 
 ### Documentation
-- [Cerelog ESP-EEG Integration](CERELOG_INTEGRATION.md) - Full EEG device setup guide
+- [Cerelog ESP-EEG Integration](EEG_INTEGRATION.md) - Full EEG device setup guide
 - [Code Editor Guide](docs/CODE_EDITOR.md) - Monaco editor usage and AI features
 
 ### External Links

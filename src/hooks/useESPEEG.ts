@@ -18,9 +18,8 @@
  * IMPORTANT: ADS1299 does NOT support impedance measurement!
  * Signal quality must be estimated from signal amplitude/noise characteristics.
  * 
- * Since browsers cannot open raw TCP sockets, this hook supports:
- * 1. WebSocket bridge that proxies TCP binary packets
- * 2. Simulation mode for development
+ * Since browsers cannot open raw TCP sockets, this hook requires:
+ * - WebSocket bridge that proxies TCP binary packets
  * 
  * For direct device access, use the Python scripts from Cerelog.
  */
@@ -293,7 +292,7 @@ export function useESPEEG() {
   }, []);
 
   /**
-   * Handle JSON messages (for hybrid bridge or simulation mode)
+   * Handle JSON messages (for hybrid bridge mode)
    */
   const processJsonMessage = useCallback((data: string) => {
     try {
@@ -364,8 +363,7 @@ export function useESPEEG() {
    * 
    * Options:
    * 1. Run the Python WebSocket bridge (see cerelog-ws-bridge.py)
-   * 2. Use simulation mode with mock data
-   * 3. Use the Python scripts directly for actual device access
+   * 2. Use the Python scripts directly for actual device access
    */
   const connect = useCallback((url: string) => {
     if (wsRef.current) {
