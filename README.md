@@ -33,6 +33,42 @@ PhantomLoop is one component of the **Phantom Stack**, an integrated ecosystem f
 
 > A research-grade dashboard for visualizing and validating BCI decoder performance in real-time.
 
+## 📡 Cerelog ESP-EEG Integration (Experimental)
+
+This branch adds support for the **Cerelog ESP-EEG** device - a low-cost 8-channel EEG system based on the ADS1299 chip.
+
+### Hardware Specs
+| Spec | Value |
+|------|-------|
+| Chip | Texas Instruments ADS1299 (24-bit ADC) |
+| Channels | 8 EEG channels |
+| Sample Rate | 250 SPS |
+| WiFi AP | SSID: `CERELOG_EEG` / Password: `cerelog123` |
+| Device IP | `192.168.4.1` |
+| Protocol | TCP on port 1112 (binary packets) |
+
+### Quick Start (ESP-EEG)
+
+```bash
+# 1. Connect to ESP-EEG WiFi network
+#    SSID: CERELOG_EEG, Password: cerelog123
+
+# 2. Run the WebSocket bridge (browsers can't connect to TCP directly)
+pip install websockets
+python scripts/cerelog_ws_bridge.py
+
+# 3. In PhantomLoop, connect to ws://localhost:8765
+```
+
+### Features
+- **Electrode Placement Screen** - Interactive 10-20 montage configuration
+- **Signal Quality Monitoring** - Real-time quality estimation (no impedance on ADS1299)
+- **Spatial Feature Extraction** - ROI averages, spatial gradients, neighborhood correlations
+- **Brainflow Export** - JSON/CSV/Python code generation for Brainflow integration
+- **Demo Mode** - Test without hardware using realistic simulated EEG
+
+See [CERELOG_INTEGRATION.md](CERELOG_INTEGRATION.md) for full documentation.
+
 PhantomLoop streams neural data from PhantomLink (MC_Maze dataset, 142 channels @ 40Hz) and visualizes **ground truth cursor movements** alongside **your decoder's predictions**. Built for BCI researchers who need to rapidly prototype, test, and compare decoding algorithms.
 
 <img width="2524" height="1924" alt="image" src="https://github.com/user-attachments/assets/b07558b9-381d-457e-941c-0be0ad97a398" />
@@ -257,6 +293,7 @@ src/
 │   ├── useMessagePack.ts
 │   ├── useDecoder.ts
 │   ├── useWebSocket.ts
+│   ├── useESPEEG.ts     # Cerelog ESP-EEG device hook
 │   └── usePerformance.ts
 ├── store/               # Zustand state slices
 │   ├── connectionSlice.ts
@@ -269,7 +306,14 @@ src/
 │   ├── tfjsModels.ts    # Model architectures
 │   └── executeDecoder.ts
 ├── types/               # TypeScript definitions
-└── utils/               # Constants, helpers
+│   ├── electrodes.ts    # Electrode configuration types
+│   └── ...
+├── utils/               # Constants, helpers
+│   ├── spatialFeatures.ts # Spatial feature extraction
+│   ├── brainflowExport.ts # Brainflow export utilities
+│   └── ...
+scripts/
+└── cerelog_ws_bridge.py # WebSocket-TCP bridge for ESP-EEG
 ```
 
 ## 🧠 Adding Custom Decoders
@@ -435,6 +479,7 @@ Exceeding 50ms triggers desync alert.
 
 ### Documentation
 - [PhantomLink Backend](https://github.com/yelabb/PhantomLink) - Neural data streaming server
+- [Cerelog ESP-EEG Integration](CERELOG_INTEGRATION.md) - ESP-EEG device setup and protocol
 - [Code Editor Guide](docs/CODE_EDITOR.md) - Monaco editor usage
 - [PhantomLink Beginner's Guide](../PhantomLink/docs/BEGINNERS_GUIDE.md) - BCI introduction
 
