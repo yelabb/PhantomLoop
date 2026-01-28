@@ -240,23 +240,28 @@ class ESPEEGBridge:
         self.streaming = False
         
     async def tcp_reader_task(self):
-        """Background task to read TCP packets and broadcast to WebSocket clients"""
+        """Background task to read TCP packets and broadcast them"""
         while self.streaming:
             if self.tcp_reader:
                 packet = self.tcp_reader.read_packet()
                 if packet:
                     try:
-                        sample = parse_packet(packet)
-                        message = json.dumps(sample)
-                        
-                        # Broadcast to all connected WebSocket clients
+                        # OPTION 1: Send as binary (efficient)
                         if self.clients:
                             await asyncio.gather(
-                                *[client.send(message) for client in self.clients],
+                                *[client.send(packet) for client in self.clients],
                                 return_exceptions=True
                             )
+                        
+                        # OPTION 2: Convert to JSON (simpler debugger)
+                        # sample = parse_packet(packet)
+                        # message = json.dumps(sample)
+                        # await asyncio.gather(
+                        #     *[client.send(message) for client in self.clients],
+                        #     return_exceptions=True
+                        # )
                     except Exception as e:
-                        print(f"Parse error: {e}")
+                        print(f"Transmission error: {e}")
             
             # Small delay to prevent busy loop
             await asyncio.sleep(0.001)  # ~1000 checks/sec for 250 SPS stream

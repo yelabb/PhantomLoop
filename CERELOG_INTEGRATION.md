@@ -177,16 +177,21 @@ def to_microvolts(raw_24bit):
 
 ### WebSocket Bridge Protocol
 
-The `cerelog_ws_bridge.py` converts binary packets to JSON for browser consumption:
+The `cerelog_ws_bridge.py` script now acts as a pass-through proxy, forwarding raw binary packets from the TCP stream directly to the WebSocket client.
 
-```json
-{
-  "type": "sample",
-  "timestamp": 1234,
-  "status": 12345,
-  "channels": [-12.3, 45.6, -78.9, 23.4, -56.7, 89.0, -12.3, 45.6]
-}
+This means the browser receives the raw 37-byte packets:
+
+```typescript
+// Browser receives ArrayBuffer
+const packet = new Uint8Array(event.data);
+
+// [0-1]   0xABCD
+// [2]     0x1F (31)
+// ...
+// [35-36] 0xDCBA
 ```
+
+Parsing happens effectively on the client side in `src/hooks/useESPEEG.ts`.
 
 ### Device Discovery (UDP)
 
