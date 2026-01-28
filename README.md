@@ -69,6 +69,60 @@ python scripts/cerelog_ws_bridge.py
 
 See [CERELOG_INTEGRATION.md](CERELOG_INTEGRATION.md) for full documentation.
 
+---
+
+## 🔌 Stream-Agnostic Architecture
+
+PhantomLoop now supports **any multichannel time-series source** through a unified adapter pattern. This allows seamless switching between neural data sources:
+
+### Supported Stream Sources
+
+| Source | Channels | Sample Rate | Description |
+|--------|----------|-------------|-------------|
+| **PhantomLink MC_Maze** | 142 | 40 Hz | Spike counts from primate motor cortex |
+| **Cerelog ESP-EEG** | 8 | 250 Hz | EEG via ADS1299 (requires WebSocket bridge) |
+| **Simulated EEG** | 8 | 250 Hz | Synthetic alpha/beta oscillations |
+| **Simulated Spikes** | 142 | 40 Hz | Synthetic cursor-task data with ground truth |
+
+### Adding Custom Stream Sources
+
+Implement the `StreamSource` interface to add your own data source:
+
+```typescript
+import type { StreamSource, StreamConfig, StreamSample } from './types/stream';
+
+class MyCustomAdapter implements StreamSource {
+  readonly id = 'my-source';
+  readonly name = 'My Custom Source';
+  
+  async connect(url: string, config?: StreamConfig): Promise<void> {
+    // Connect to your data source
+  }
+  
+  disconnect(): void {
+    // Clean up connection
+  }
+  
+  onSample(callback: (sample: StreamSample) => void): () => void {
+    // Subscribe to incoming samples, return unsubscribe function
+  }
+}
+```
+
+### Dynamic Decoder Models
+
+The decoder factory creates TensorFlow.js models with **dynamic input shapes** based on the active stream's channel count:
+
+```typescript
+import { createDynamicLinearDecoder, createDynamicMLPDecoder } from './decoders/dynamicModels';
+
+// Works with any channel count!
+const decoder8ch = createDynamicLinearDecoder(8);   // For EEG
+const decoder142ch = createDynamicMLPDecoder(142);  // For spikes
+```
+
+---
+
 PhantomLoop streams neural data from PhantomLink (MC_Maze dataset, 142 channels @ 40Hz) and visualizes **ground truth cursor movements** alongside **your decoder's predictions**. Built for BCI researchers who need to rapidly prototype, test, and compare decoding algorithms.
 
 <img width="2524" height="1924" alt="image" src="https://github.com/user-attachments/assets/b07558b9-381d-457e-941c-0be0ad97a398" />
@@ -80,27 +134,56 @@ PhantomLoop streams neural data from PhantomLink (MC_Maze dataset, 142 channels 
 PhantomLoop is a single-page React application with modular state management:
 
 ### Core Components
-1. **WebSocket Client** - Binary MessagePack protocol (40Hz streaming)
-2. **State Management** - Zustand with 4 specialized slices
-3. **Decoder Engine** - Supports JavaScript and TensorFlow.js models
-4. **Visualization Suite** - 2D arena, neural activity, performance metrics
+1. **Stream Adapters** - Unified interface for any multichannel data source
+2. **WebSocket Client** - Binary MessagePack protocol (40Hz streaming)
+3. **State Management** - Zustand with 5 specialized slices
+4. **Decoder Engine** - Supports JavaScript and TensorFlow.js models (dynamic input shapes)
+5. **Visualization Suite** - 2D arena, neural activity, performance metrics
 
 ### State Slices (Zustand)
 - **connectionSlice**: WebSocket lifecycle, session management
 - **streamSlice**: Packet buffering with throttled updates (20Hz UI refresh)
 - **decoderSlice**: Decoder registry, execution, loading states
 - **metricsSlice**: Accuracy tracking, latency monitoring, error statistics
+- **unifiedStreamSlice**: Stream source selection, adapter state, N-channel buffer
 
 ### Data Flow
-1. PhantomLink sends binary packets (40Hz) via WebSocket
-2. `useMessagePack` hook deserializes and buffers data
-3. `useDecoder` hook executes active decoder (JS or TFJS)
-4. Store updates with **ground truth** + **decoder output**
-5. Components render synchronized visualizations
+1. **Stream Adapter** connects to data source (PhantomLink, ESP-EEG, or Simulation)
+2. Adapter normalizes data into `StreamSample` format
+3. `useStream` hook buffers samples and updates store
+4. `useDecoder` hook executes active decoder (JS or TFJS with dynamic input shape)
+5. Store updates with **ground truth** + **decoder output**
+6. Components render synchronized visualizations
+
+### Stream Adapter Pattern
+```
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│  PhantomLink    │     │   ESP-EEG       │     │  Simulation     │
+│  (142ch/40Hz)   │     │   (8ch/250Hz)   │     │  (configurable) │
+└────────┬────────┘     └────────┬────────┘     └────────┬────────┘
+         │                       │                       │
+         └───────────────────────┼───────────────────────┘
+                                 │
+                    ┌────────────▼────────────┐
+                    │    StreamSource API     │
+                    │  connect() / onSample() │
+                    └────────────┬────────────┘
+                                 │
+                    ┌────────────▼────────────┐
+                    │   Unified Stream Store  │
+                    │   (unifiedStreamSlice)  │
+                    └────────────┬────────────┘
+                                 │
+                    ┌────────────▼────────────┐
+                    │   Dynamic Decoders      │
+                    │   (any channel count)   │
+                    └─────────────────────────┘
+```
 
 ### Decoder Execution
 - **JavaScript**: Direct execution in main thread (<1ms)
 - **TensorFlow.js**: Web Worker execution (5-10ms)
+- **Dynamic Models**: Input shape adapts to stream channel count
 - **Timeout protection**: 10ms limit per inference
 - **Error handling**: Falls back to passthrough on failure
 
