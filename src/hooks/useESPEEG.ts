@@ -56,7 +56,7 @@ export const CERELOG_PROTOCOL = {
 
 // Signal quality thresholds (µV) - derived from signal characteristics
 // Since ADS1299 has no impedance measurement, we estimate from amplitude
-const SIGNAL_THRESHOLDS = {
+export const SIGNAL_THRESHOLDS = {
   NOISE_FLOOR_UV: 5,      // Below = no signal (disconnected)
   GOOD_MAX_UV: 100,       // Normal EEG range (good contact)
   FAIR_MAX_UV: 200,       // Slightly elevated noise
@@ -83,8 +83,9 @@ export interface ChannelStats {
 /**
  * Parse ADS1299 24-bit signed value to µV
  * Based on: Python_wifi_LSL.py voltage conversion
+ * @exported for testing
  */
-function parseADS1299ToMicrovolts(bytes: Uint8Array, offset: number): number {
+export function parseADS1299ToMicrovolts(bytes: Uint8Array, offset: number): number {
   // 24-bit big-endian signed integer
   let value = (bytes[offset] << 16) | (bytes[offset + 1] << 8) | bytes[offset + 2];
   
@@ -101,8 +102,9 @@ function parseADS1299ToMicrovolts(bytes: Uint8Array, offset: number): number {
 /**
  * Parse binary packet from ESP-EEG TCP stream
  * Returns null if packet is invalid
+ * @exported for testing
  */
-function parsePacket(data: Uint8Array): ESPEEGSample | null {
+export function parsePacket(data: Uint8Array): ESPEEGSample | null {
   if (data.length !== CERELOG_PROTOCOL.PACKET_SIZE) {
     return null;
   }
@@ -147,8 +149,9 @@ function parsePacket(data: Uint8Array): ESPEEGSample | null {
 /**
  * Estimate signal quality from amplitude statistics
  * ADS1299 doesn't have impedance measurement - we infer quality from signal characteristics
+ * @exported for testing
  */
-function estimateQualityFromSignal(stats: { std: number; peakToPeak: number }): 'good' | 'fair' | 'poor' | 'disconnected' {
+export function estimateQualityFromSignal(stats: { std: number; peakToPeak: number }): 'good' | 'fair' | 'poor' | 'disconnected' {
   // Use the more reliable metric between std and peak-to-peak/4
   const amplitude = Math.max(stats.std, stats.peakToPeak / 4);
   
@@ -170,8 +173,9 @@ function estimateQualityFromSignal(stats: { std: number; peakToPeak: number }): 
  * This is NOT real impedance - just a visual indicator
  * Good contact (~5µV noise) → ~5kΩ display
  * Poor contact (~500µV noise) → ~50kΩ display
+ * @exported for testing
  */
-function estimatePseudoImpedance(std: number): number {
+export function estimatePseudoImpedance(std: number): number {
   if (std < SIGNAL_THRESHOLDS.NOISE_FLOOR_UV) {
     return 999; // Open circuit indicator
   }
