@@ -4,17 +4,33 @@ import { memo, useState, useCallback, useEffect } from 'react';
 import { useStore } from '../store';
 import { SERVER_CONFIG } from '../utils/constants';
 import { Spinner } from './LoadingStates';
+import { useESPEEG } from '../hooks/useESPEEG';
+
+type DataSourceType = 'phantomlink' | 'esp-eeg';
 
 interface WelcomeScreenProps {
   onConnectToDashboard?: () => void;
+  onConnectToESPEEG?: () => void;
 }
 
-export const WelcomeScreen = memo(function WelcomeScreen({ onConnectToDashboard }: WelcomeScreenProps) {
+export const WelcomeScreen = memo(function WelcomeScreen({ onConnectToDashboard, onConnectToESPEEG }: WelcomeScreenProps) {
   const connectWebSocket = useStore((state) => state.connectWebSocket);
   const isConnected = useStore((state) => state.isConnected);
   const connectionError = useStore((state) => state.connectionError);
+  const setDataSource = useStore((state) => state.setDataSource);
   
+  // ESP-EEG hook
+  const { 
+    connectionStatus: espConnectionStatus, 
+    connect: connectESPEEG, 
+    lastError: espLastError,
+    isDemoMode,
+    startDemoMode,
+  } = useESPEEG();
+  
+  const [dataSourceType, setDataSourceType] = useState<DataSourceType>('phantomlink');
   const [serverUrl, setServerUrl] = useState<string>(SERVER_CONFIG.BASE_URL);
+  const [espEEGUrl, setEspEEGUrl] = useState<string>('ws://localhost:8765');
   const [sessionInput, setSessionInput] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
@@ -60,12 +76,42 @@ export const WelcomeScreen = memo(function WelcomeScreen({ onConnectToDashboard 
     }
   }, [sessionInput, handleConnect]);
 
-  // Auto-navigate to dashboard when connected
+  // Handle ESP-EEG connection
+  const handleConnectESPEEG = useCallback(() => {
+    setIsConnecting(true);
+    setError(null);
+    setDataSource({
+      type: 'esp-eeg',
+      url: espEEGUrl,
+      protocol: 'websocket',
+    });
+    connectESPEEG(espEEGUrl);
+  }, [espEEGUrl, connectESPEEG, setDataSource]);
+
+  // Handle ESP-EEG demo mode
+  const handleStartDemoMode = useCallback(() => {
+    setDataSource({
+      type: 'esp-eeg',
+      url: 'demo://simulated',
+      protocol: 'websocket', // Demo uses simulated websocket-like interface
+    });
+    startDemoMode({ scenario: 'realistic', simulateAlpha: true });
+  }, [startDemoMode, setDataSource]);
+
+  // Auto-navigate to dashboard when PhantomLink connected
   useEffect(() => {
     if (isConnected && onConnectToDashboard) {
       onConnectToDashboard();
     }
   }, [isConnected, onConnectToDashboard]);
+
+  // Auto-navigate to electrode placement when ESP-EEG connects or demo mode starts
+  useEffect(() => {
+    if ((espConnectionStatus === 'connected' || isDemoMode) && onConnectToESPEEG) {
+      setIsConnecting(false);
+      onConnectToESPEEG();
+    }
+  }, [espConnectionStatus, isDemoMode, onConnectToESPEEG]);
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black">
@@ -124,98 +170,217 @@ export const WelcomeScreen = memo(function WelcomeScreen({ onConnectToDashboard 
           </div>
 
           <div className="space-y-4">
-            {/* Server URL configuration */}
+            {/* Data Source Selector */}
             <div className="space-y-2">
-              <label className="text-sm text-gray-400 block">PhantomLink Server URL</label>
-              <input
-                type="text"
-                value={serverUrl}
-                onChange={(e) => setServerUrl(e.target.value)}
-                placeholder="ws://localhost:8000"
-                className="w-full bg-gray-800/80 text-white px-4 py-3 text-sm 
-                  border border-gray-600/50 focus:border-biolink focus:outline-none 
-                  focus:ring-1 focus:ring-biolink/30 placeholder:text-gray-500 
-                  transition-all duration-200 font-mono"
-              />
-              <p className="text-xs text-gray-500">
-                Enter your server URL or use the default
-              </p>
-            </div>
-
-            {/* Join existing session */}
-            <div className="space-y-2">
-              <label className="text-sm text-gray-400 block">Join existing session</label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={sessionInput}
-                  onChange={(e) => setSessionInput(e.target.value.toUpperCase())}
-                  onKeyPress={handleKeyPress}
-                  placeholder="Enter session code..."
-                  className="flex-1 bg-gray-800/80 text-white px-4 py-3 text-sm 
-                    border border-gray-600/50 focus:border-phantom focus:outline-none 
-                    focus:ring-1 focus:ring-phantom/30 placeholder:text-gray-500 
-                    transition-all duration-200 font-mono tracking-wider"
-                  disabled={isConnecting}
-                  maxLength={8}
-                />
+              <label className="text-sm text-gray-400 block">Data Source</label>
+              <div className="grid grid-cols-2 gap-2">
                 <button
-                  onClick={handleConnect}
-                  disabled={!sessionInput.trim() || isConnecting}
-                  className="px-6 py-3 bg-gradient-to-r from-phantom to-yellow-500 
-                    text-black text-sm font-bold
-                    hover:from-yellow-400 hover:to-yellow-500 
-                    disabled:opacity-50 disabled:cursor-not-allowed 
-                    transition-all duration-200
-                    flex items-center gap-2 min-w-[100px] justify-center"
+                  onClick={() => setDataSourceType('phantomlink')}
+                  className={`p-3 border transition-all duration-200 text-left ${
+                    dataSourceType === 'phantomlink'
+                      ? 'border-phantom bg-phantom/10 text-white'
+                      : 'border-gray-600/50 bg-gray-800/50 text-gray-400 hover:border-gray-500'
+                  }`}
                 >
-                  {isConnecting ? (
-                    <>
-                      <Spinner size="xs" color="phantom" />
-                      <span>...</span>
-                    </>
-                  ) : (
-                    'Join'
-                  )}
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className={`w-2 h-2 rounded-full ${dataSourceType === 'phantomlink' ? 'bg-phantom' : 'bg-gray-500'}`} />
+                    <span className="font-medium text-sm">PhantomLink</span>
+                  </div>
+                  <p className="text-xs text-gray-500">MC_Maze neural spiking data</p>
+                </button>
+                <button
+                  onClick={() => setDataSourceType('esp-eeg')}
+                  className={`p-3 border transition-all duration-200 text-left ${
+                    dataSourceType === 'esp-eeg'
+                      ? 'border-biolink bg-biolink/10 text-white'
+                      : 'border-gray-600/50 bg-gray-800/50 text-gray-400 hover:border-gray-500'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className={`w-2 h-2 rounded-full ${dataSourceType === 'esp-eeg' ? 'bg-biolink' : 'bg-gray-500'}`} />
+                    <span className="font-medium text-sm">ESP-EEG</span>
+                  </div>
+                  <p className="text-xs text-gray-500">Cerelog 8-ch EEG hardware</p>
                 </button>
               </div>
             </div>
 
-            {/* Divider */}
-            <div className="flex items-center gap-4 py-2">
-              <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gray-600 to-transparent" />
-              <span className="text-gray-500 text-xs uppercase tracking-wider">or</span>
-              <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gray-600 to-transparent" />
-            </div>
+            {/* PhantomLink Options */}
+            {dataSourceType === 'phantomlink' && (
+              <>
+                {/* Server URL configuration */}
+                <div className="space-y-2">
+                  <label className="text-sm text-gray-400 block">PhantomLink Server URL</label>
+                  <input
+                    type="text"
+                    value={serverUrl}
+                    onChange={(e) => setServerUrl(e.target.value)}
+                    placeholder="ws://localhost:8000"
+                    className="w-full bg-gray-800/80 text-white px-4 py-3 text-sm 
+                      border border-gray-600/50 focus:border-biolink focus:outline-none 
+                      focus:ring-1 focus:ring-biolink/30 placeholder:text-gray-500 
+                      transition-all duration-200 font-mono"
+                  />
+                  <p className="text-xs text-gray-500">
+                    Enter your server URL or use the default
+                  </p>
+                </div>
 
-            {/* Create new session */}
-            <button
-              onClick={handleCreateSession}
-              disabled={isCreating}
-              className="w-full py-4 bg-gray-800/80 text-white text-sm font-semibold
-                hover:bg-gray-700/80 disabled:opacity-50 disabled:cursor-not-allowed
-                transition-all duration-200 border border-gray-600/50 hover:border-phantom/50
-                flex items-center justify-center gap-3 group"
-            >
-              {isCreating ? (
-                <>
-                  <Spinner size="sm" color="white" />
-                  <span>Creating session...</span>
-                </>
-              ) : (
-                <>
-                  <span className="text-xl group-hover:scale-110 transition-transform">+</span>
-                  <span>Create New Session</span>
-                </>
-              )}
-            </button>
+                {/* Join existing session */}
+                <div className="space-y-2">
+                  <label className="text-sm text-gray-400 block">Join existing session</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={sessionInput}
+                      onChange={(e) => setSessionInput(e.target.value.toUpperCase())}
+                      onKeyPress={handleKeyPress}
+                      placeholder="Enter session code..."
+                      className="flex-1 bg-gray-800/80 text-white px-4 py-3 text-sm 
+                        border border-gray-600/50 focus:border-phantom focus:outline-none 
+                        focus:ring-1 focus:ring-phantom/30 placeholder:text-gray-500 
+                        transition-all duration-200 font-mono tracking-wider"
+                      disabled={isConnecting}
+                      maxLength={8}
+                    />
+                    <button
+                      onClick={handleConnect}
+                      disabled={!sessionInput.trim() || isConnecting}
+                      className="px-6 py-3 bg-gradient-to-r from-phantom to-yellow-500 
+                        text-black text-sm font-bold
+                        hover:from-yellow-400 hover:to-yellow-500 
+                        disabled:opacity-50 disabled:cursor-not-allowed 
+                        transition-all duration-200
+                        flex items-center gap-2 min-w-[100px] justify-center"
+                    >
+                      {isConnecting ? (
+                        <>
+                          <Spinner size="xs" color="phantom" />
+                          <span>...</span>
+                        </>
+                      ) : (
+                        'Join'
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Divider */}
+                <div className="flex items-center gap-4 py-2">
+                  <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gray-600 to-transparent" />
+                  <span className="text-gray-500 text-xs uppercase tracking-wider">or</span>
+                  <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gray-600 to-transparent" />
+                </div>
+
+                {/* Create new session */}
+                <button
+                  onClick={handleCreateSession}
+                  disabled={isCreating}
+                  className="w-full py-4 bg-gray-800/80 text-white text-sm font-semibold
+                    hover:bg-gray-700/80 disabled:opacity-50 disabled:cursor-not-allowed
+                    transition-all duration-200 border border-gray-600/50 hover:border-phantom/50
+                    flex items-center justify-center gap-3 group"
+                >
+                  {isCreating ? (
+                    <>
+                      <Spinner size="sm" color="white" />
+                      <span>Creating session...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-xl group-hover:scale-110 transition-transform">+</span>
+                      <span>Create New Session</span>
+                    </>
+                  )}
+                </button>
+              </>
+            )}
+
+            {/* ESP-EEG Options */}
+            {dataSourceType === 'esp-eeg' && (
+              <>
+                {/* WebSocket Bridge URL */}
+                <div className="space-y-2">
+                  <label className="text-sm text-gray-400 block">WebSocket Bridge URL</label>
+                  <input
+                    type="text"
+                    value={espEEGUrl}
+                    onChange={(e) => setEspEEGUrl(e.target.value)}
+                    placeholder="ws://localhost:8765"
+                    className="w-full bg-gray-800/80 text-white px-4 py-3 text-sm 
+                      border border-gray-600/50 focus:border-biolink focus:outline-none 
+                      focus:ring-1 focus:ring-biolink/30 placeholder:text-gray-500 
+                      transition-all duration-200 font-mono"
+                    disabled={isConnecting}
+                  />
+                  <p className="text-xs text-gray-500">
+                    Connects to a local bridge that proxies TCP data from the ESP-EEG device.{' '}
+                    <a
+                      href="https://github.com/yelabb/PhantomLoop/blob/main/CERELOG_INTEGRATION.md"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-biolink hover:text-biolink/80 underline"
+                    >
+                      Setup guide →
+                    </a>
+                  </p>
+                </div>
+
+                {/* Connect button */}
+                <button
+                  onClick={handleConnectESPEEG}
+                  disabled={isConnecting || espConnectionStatus === 'connecting'}
+                  className="w-full py-4 bg-gradient-to-r from-biolink to-cyan-500 
+                    text-black text-sm font-bold
+                    hover:from-cyan-400 hover:to-cyan-500 
+                    disabled:opacity-50 disabled:cursor-not-allowed 
+                    transition-all duration-200
+                    flex items-center justify-center gap-2"
+                >
+                  {isConnecting || espConnectionStatus === 'connecting' ? (
+                    <>
+                      <Spinner size="sm" color="white" />
+                      <span>Connecting to ESP-EEG...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>🧠</span>
+                      <span>Connect to ESP-EEG</span>
+                    </>
+                  )}
+                </button>
+
+                {/* Divider */}
+                <div className="flex items-center gap-4 py-2">
+                  <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gray-600 to-transparent" />
+                  <span className="text-gray-500 text-xs uppercase tracking-wider">or</span>
+                  <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gray-600 to-transparent" />
+                </div>
+
+                {/* Demo mode */}
+                <button
+                  onClick={handleStartDemoMode}
+                  className="w-full py-4 bg-gray-800/80 text-white text-sm font-semibold
+                    hover:bg-gray-700/80 transition-all duration-200 
+                    border border-gray-600/50 hover:border-biolink/50
+                    flex items-center justify-center gap-3 group"
+                >
+                  <span className="text-xl group-hover:scale-110 transition-transform">🎮</span>
+                  <span>Start Demo Mode</span>
+                </button>
+
+                <p className="text-xs text-gray-500 text-center">
+                  Demo mode generates realistic EEG signals for testing without hardware
+                </p>
+              </>
+            )}
           </div>
 
           {/* Error message */}
-          {(error || connectionError) && (
+          {(error || connectionError || espLastError) && (
             <div className="mt-4 p-3 bg-red-500/20 border border-red-500/50">
               <p className="text-red-400 text-sm text-center">
-                {error || connectionError}
+                {error || connectionError || espLastError}
               </p>
             </div>
           )}

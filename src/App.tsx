@@ -41,6 +41,7 @@ function App() {
       {currentScreen === 'welcome' && (
         <WelcomeScreen 
           onConnectToDashboard={() => setCurrentScreen('dashboard')}
+          onConnectToESPEEG={() => setCurrentScreen('electrode-placement')}
         />
       )}
       
