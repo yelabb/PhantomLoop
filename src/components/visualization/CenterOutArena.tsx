@@ -264,7 +264,7 @@ export const CenterOutArena = memo(function CenterOutArena() {
           {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
             <path
               key={i}
-              d={`M 0 ${160 + i * 40} Q ${ARENA_SIZE / 4} ${140 + i * 40 + Math.sin(Date.now() / 1000 + i) * 20}, ${ARENA_SIZE / 2} ${160 + i * 40} T ${ARENA_SIZE} ${160 + i * 40}`}
+              d={`M 0 ${160 + i * 40} Q ${ARENA_SIZE / 4} ${140 + i * 40 + Math.sin(i * 0.8) * 20}, ${ARENA_SIZE / 2} ${160 + i * 40} T ${ARENA_SIZE} ${160 + i * 40}`}
               fill="none"
               stroke="url(#eegGradient)"
               strokeWidth="2"

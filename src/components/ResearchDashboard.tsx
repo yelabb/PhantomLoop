@@ -85,8 +85,17 @@ export const ResearchDashboard = memo(function ResearchDashboard({ onConfigureEl
   const updateAccuracy = useStore((state) => state.updateAccuracy);
   const dataSource = useStore((state) => state.dataSource);
   
+  // List of EEG device types that don't have ground truth (no cursor task)
+  const eegDeviceTypes = [
+    'esp-eeg', 'cerelog-esp-eeg', 'openbci-cyton', 'openbci-cyton-daisy', 'openbci-ganglion',
+    'neurosky-mindwave', 'muse-2', 'muse-s', 'emotiv-insight', 'emotiv-epoc-x', 'brainflow-generic'
+  ];
+  
   // Determine if current data source has ground truth for accuracy metrics
-  const hasGroundTruth = dataSource?.type !== 'esp-eeg';
+  const hasGroundTruth = dataSource?.type ? !eegDeviceTypes.includes(dataSource.type) : true;
+  
+  // Show electrode placement only for EEG devices (not PhantomLink)
+  const isEEGDevice = dataSource?.type ? eegDeviceTypes.includes(dataSource.type) : false;
   
   // Panel ordering state with localStorage persistence
   // Extended with new research panels for dream dashboard
@@ -493,12 +502,12 @@ Reveals neural ensembles and functional groups. Hover for exact correlation valu
               status={systemStatus}
               label={isConnected ? `${totalLatency.toFixed(0)}ms` : 'Offline'}
             />
-            {onConfigureElectrodes && (
+            {onConfigureElectrodes && isEEGDevice && (
               <button
                 onClick={onConfigureElectrodes}
                 className="flex items-center gap-2 px-3 py-2 text-gray-400 hover:text-white hover:bg-gray-800/80 
                   border border-gray-700/50 hover:border-gray-600 transition-all text-sm"
-                title="Configure Electrodes (ESP-EEG)"
+                title="Configure Electrodes (EEG Device)"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />

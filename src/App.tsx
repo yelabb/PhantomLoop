@@ -36,7 +36,8 @@ function App() {
   // PhantomLink disconnection handling
   useEffect(() => {
     if (wasConnectedRef.current && !isConnected && currentScreen === 'dashboard') {
-      setCurrentScreen('welcome');
+      // Use setTimeout to avoid setState during render cycle
+      setTimeout(() => setCurrentScreen('welcome'), 0);
     }
     wasConnectedRef.current = isConnected;
   }, [isConnected, currentScreen]);
@@ -48,7 +49,8 @@ function App() {
       (currentScreen === 'dashboard' && dataSource?.type === 'esp-eeg');
     
     if (wasESPConnectedRef.current && !isESPConnected && isOnESPScreen) {
-      setCurrentScreen('welcome');
+      // Use setTimeout to avoid setState during render cycle
+      setTimeout(() => setCurrentScreen('welcome'), 0);
     }
     wasESPConnectedRef.current = isESPConnected;
   }, [espConnectionStatus, currentScreen, dataSource?.type]);

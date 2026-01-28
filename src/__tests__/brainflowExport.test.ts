@@ -285,7 +285,7 @@ describe('importFromBrainflow', () => {
     const config = importFromBrainflow(brainflowData);
 
     expect(config.name).toBe('Imported from Brainflow');
-    expect(config.deviceType).toBe('brainflow');
+    expect(config.deviceType).toBe('brainflow-generic');
     expect(config.channelCount).toBe(2);
     expect(config.samplingRate).toBe(250);
     expect(config.layout.montage).toBe('10-20');
@@ -362,7 +362,7 @@ describe('generateBrainflowPythonCode', () => {
 
     // Check board initialization
     expect(code).toContain('params = BrainFlowInputParams()');
-    expect(code).toContain('board = BoardShim(38, params)');
+    expect(code).toContain('board = BoardShim(BOARD_ID, params)');
     expect(code).toContain('board.prepare_session()');
   });
 
@@ -370,7 +370,7 @@ describe('generateBrainflowPythonCode', () => {
     const config = createTestElectrodeConfig();
     const code = generateBrainflowPythonCode(config);
 
-    expect(code).toContain('channel_mapping = {');
+    expect(code).toContain('CHANNEL_MAPPING = {');
     expect(code).toContain('0: "Fp1"');
     expect(code).toContain('1: "Fp2"');
     expect(code).toContain('7: "O2"');
@@ -380,7 +380,8 @@ describe('generateBrainflowPythonCode', () => {
     const config = createTestElectrodeConfig();
     const code = generateBrainflowPythonCode(config);
 
-    expect(code).toContain('Position: (-0.31, 0.95, 0.00)');
+    // Position is now in compact inline comment format
+    expect(code).toContain('# (-0.31, 0.95, 0.00)');
   });
 
   it('should list only active channels', () => {
@@ -388,8 +389,8 @@ describe('generateBrainflowPythonCode', () => {
     const code = generateBrainflowPythonCode(config);
 
     // Channel 6 (O1) is inactive
-    expect(code).toContain('active_channels = [0, 1, 2, 3, 4, 5, 7]');
-    expect(code).not.toContain('active_channels = [0, 1, 2, 3, 4, 5, 6, 7]');
+    expect(code).toContain('ACTIVE_CHANNELS = [0, 1, 2, 3, 4, 5, 7]');
+    expect(code).not.toContain('ACTIVE_CHANNELS = [0, 1, 2, 3, 4, 5, 6, 7]');
   });
 
   it('should include sampling rate and montage', () => {
@@ -411,7 +412,7 @@ describe('generateBrainflowPythonCode', () => {
     const config = createTestElectrodeConfig();
     const code = generateBrainflowPythonCode(config, 0); // Cyton board
 
-    expect(code).toContain('board = BoardShim(0, params)');
+    expect(code).toContain('BOARD_ID = 0');
   });
 
   it('should include device config in params when provided', () => {
@@ -427,7 +428,9 @@ describe('generateBrainflowPythonCode', () => {
     const config = createTestElectrodeConfig();
     const code = generateBrainflowPythonCode(config);
 
-    expect(code).toContain('board.start_stream()');
+    // Wrapped in helper functions
+    expect(code).toContain('def start_stream');
+    expect(code).toContain('board.start_stream(buffer_size)');
     expect(code).toContain('board.stop_stream()');
     expect(code).toContain('board.release_session()');
   });
@@ -446,7 +449,7 @@ describe('generateBrainflowPythonCode', () => {
     };
     const code = generateBrainflowPythonCode(config);
 
-    expect(code).toContain('active_channels = [0, 1]');
+    expect(code).toContain('ACTIVE_CHANNELS = [0, 1]');
   });
 
   it('should handle no active channels', () => {
@@ -462,7 +465,7 @@ describe('generateBrainflowPythonCode', () => {
     };
     const code = generateBrainflowPythonCode(config);
 
-    expect(code).toContain('active_channels = []');
+    expect(code).toContain('ACTIVE_CHANNELS = []');
   });
 });
 
@@ -494,7 +497,7 @@ describe('Edge cases', () => {
     expect(parsed.channels).toHaveLength(0);
 
     const python = generateBrainflowPythonCode(config);
-    expect(python).toContain('active_channels = []');
+    expect(python).toContain('ACTIVE_CHANNELS = []');
   });
 
   it('should handle special characters in config name', () => {
