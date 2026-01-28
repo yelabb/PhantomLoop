@@ -24,8 +24,6 @@ export const WelcomeScreen = memo(function WelcomeScreen({ onConnectToDashboard,
     connectionStatus: espConnectionStatus, 
     connect: connectESPEEG, 
     lastError: espLastError,
-    isDemoMode,
-    startDemoMode,
   } = useESPEEG();
   
   const [dataSourceType, setDataSourceType] = useState<DataSourceType>('phantomlink');
@@ -88,16 +86,6 @@ export const WelcomeScreen = memo(function WelcomeScreen({ onConnectToDashboard,
     connectESPEEG(espEEGUrl);
   }, [espEEGUrl, connectESPEEG, setDataSource]);
 
-  // Handle ESP-EEG demo mode
-  const handleStartDemoMode = useCallback(() => {
-    setDataSource({
-      type: 'esp-eeg',
-      url: 'demo://simulated',
-      protocol: 'websocket', // Demo uses simulated websocket-like interface
-    });
-    startDemoMode({ scenario: 'realistic', simulateAlpha: true });
-  }, [startDemoMode, setDataSource]);
-
   // Auto-navigate to dashboard when PhantomLink connected
   useEffect(() => {
     if (isConnected && onConnectToDashboard) {
@@ -105,13 +93,13 @@ export const WelcomeScreen = memo(function WelcomeScreen({ onConnectToDashboard,
     }
   }, [isConnected, onConnectToDashboard]);
 
-  // Auto-navigate to electrode placement when ESP-EEG connects or demo mode starts
+  // Auto-navigate to electrode placement when ESP-EEG connects
   useEffect(() => {
-    if ((espConnectionStatus === 'connected' || isDemoMode) && onConnectToESPEEG) {
+    if (espConnectionStatus === 'connected' && onConnectToESPEEG) {
       setIsConnecting(false);
       onConnectToESPEEG();
     }
-  }, [espConnectionStatus, isDemoMode, onConnectToESPEEG]);
+  }, [espConnectionStatus, onConnectToESPEEG]);
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black">
@@ -349,29 +337,6 @@ export const WelcomeScreen = memo(function WelcomeScreen({ onConnectToDashboard,
                     </>
                   )}
                 </button>
-
-                {/* Divider */}
-                <div className="flex items-center gap-4 py-2">
-                  <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gray-600 to-transparent" />
-                  <span className="text-gray-500 text-xs uppercase tracking-wider">or</span>
-                  <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gray-600 to-transparent" />
-                </div>
-
-                {/* Demo mode */}
-                <button
-                  onClick={handleStartDemoMode}
-                  className="w-full py-4 bg-gray-800/80 text-white text-sm font-semibold
-                    hover:bg-gray-700/80 transition-all duration-200 
-                    border border-gray-600/50 hover:border-biolink/50
-                    flex items-center justify-center gap-3 group"
-                >
-                  <span className="text-xl group-hover:scale-110 transition-transform">🎮</span>
-                  <span>Start Demo Mode</span>
-                </button>
-
-                <p className="text-xs text-gray-500 text-center">
-                  Demo mode generates realistic EEG signals for testing without hardware
-                </p>
               </>
             )}
           </div>

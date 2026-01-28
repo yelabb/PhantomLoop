@@ -285,7 +285,7 @@ export const CenterOutArena = memo(function CenterOutArena() {
           <div className="mt-6 flex items-center justify-center gap-2">
             <div className="w-2 h-2 rounded-full bg-biolink animate-pulse" />
             <span className="text-biolink text-sm font-medium">
-              {dataSource?.url?.includes('demo') ? 'Demo Mode Active' : 'Streaming EEG Data'}
+              Streaming EEG Data
             </span>
           </div>
         </div>

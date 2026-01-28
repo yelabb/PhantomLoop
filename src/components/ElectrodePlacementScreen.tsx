@@ -55,9 +55,6 @@ export function ElectrodePlacementScreen({ onBack, onContinue }: ElectrodePlacem
     packetCount,
     lastError,
     protocolInfo,
-    isDemoMode,
-    startDemoMode,
-    stopDemoMode,
   } = useESPEEG();
 
   // Initialize default configuration
@@ -131,16 +128,6 @@ export function ElectrodePlacementScreen({ onBack, onContinue }: ElectrodePlacem
   const handleDisconnectESPEEG = () => {
     disconnect();
     setDataSource(null);
-    setImpedanceMonitoring(false);
-  };
-
-  const handleStartDemoMode = () => {
-    setImpedanceMonitoring(true);
-    startDemoMode({ scenario: 'realistic' });
-  };
-
-  const handleStopDemoMode = () => {
-    stopDemoMode();
     setImpedanceMonitoring(false);
   };
 
@@ -226,18 +213,16 @@ export function ElectrodePlacementScreen({ onBack, onContinue }: ElectrodePlacem
                   </div>
                 )}
 
-                {(dataSource || isDemoMode) ? (
+                {dataSource ? (
                   <div className="space-y-3">
                     <div className="flex items-center gap-2">
                       <div className={`w-2 h-2 rounded-full animate-pulse ${
-                        connectionStatus === 'connected' ? (isDemoMode ? 'bg-amber-500' : 'bg-green-500') : 'bg-yellow-500'
+                        connectionStatus === 'connected' ? 'bg-green-500' : 'bg-yellow-500'
                       }`} />
                       <span className={`text-sm ${
-                        connectionStatus === 'connected' ? (isDemoMode ? 'text-amber-400' : 'text-green-400') : 'text-yellow-400'
+                        connectionStatus === 'connected' ? 'text-green-400' : 'text-yellow-400'
                       }`}>
-                        {connectionStatus === 'connected' 
-                          ? (isDemoMode ? '🎮 Demo Mode Active' : 'Connected')
-                          : 'Connecting...'}
+                        {connectionStatus === 'connected' ? 'Connected' : 'Connecting...'}
                       </span>
                     </div>
                     
@@ -254,14 +239,12 @@ export function ElectrodePlacementScreen({ onBack, onContinue }: ElectrodePlacem
                       </div>
                     )}
                     
-                    {!isDemoMode && (
-                      <button
-                        onClick={handleDisconnectESPEEG}
-                        className="w-full bg-red-500/20 hover:bg-red-500/30 border border-red-500/50 rounded-lg px-4 py-2 transition-colors"
-                      >
-                        Disconnect
-                      </button>
-                    )}
+                    <button
+                      onClick={handleDisconnectESPEEG}
+                      className="w-full bg-red-500/20 hover:bg-red-500/30 border border-red-500/50 rounded-lg px-4 py-2 transition-colors"
+                    >
+                      Disconnect
+                    </button>
                   </div>
                 ) : (
                   <button
@@ -272,29 +255,6 @@ export function ElectrodePlacementScreen({ onBack, onContinue }: ElectrodePlacem
                     {isConnecting ? 'Connecting...' : 'Connect to Bridge'}
                   </button>
                 )}
-
-                {/* Demo Mode */}
-                <div className="pt-4 border-t border-white/10">
-                  <p className="text-xs text-gray-500 mb-2">
-                    No hardware? Try demo mode with simulated EEG data:
-                  </p>
-                  {isDemoMode ? (
-                    <button
-                      onClick={handleStopDemoMode}
-                      className="w-full bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/50 rounded-lg px-4 py-2 transition-colors text-amber-400"
-                    >
-                      🎮 Stop Demo Mode
-                    </button>
-                  ) : (
-                    <button
-                      onClick={handleStartDemoMode}
-                      disabled={connectionStatus === 'connected'}
-                      className="w-full bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/50 rounded-lg px-4 py-2 transition-colors disabled:opacity-50"
-                    >
-                      🎮 Start Demo Mode
-                    </button>
-                  )}
-                </div>
               </div>
             </div>
 
