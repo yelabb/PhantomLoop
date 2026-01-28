@@ -3,6 +3,10 @@
  * 
  * Stream-agnostic state management for any neural/biosignal source.
  * Works alongside the legacy streamSlice for backward compatibility.
+ * 
+ * PERFORMANCE: Uses throttled updates to prevent UI jank at high sample rates.
+ * Samples are buffered immediately, but React state updates are throttled to
+ * a fixed UI refresh rate (default 20Hz) to prevent rendering bottlenecks.
  */
 
 import type { StateCreator } from 'zustand';
@@ -46,9 +50,25 @@ export interface UnifiedStreamSlice {
   clearStreamBuffer: () => void;
 }
 
+// ============================================================================
+// THROTTLED UPDATE MECHANISM
+// ============================================================================
+// At 250Hz (ESP-EEG), we'd trigger 250 React state updates/sec without throttling.
+// This batches samples and updates React at a fixed UI refresh rate.
+
+const UI_REFRESH_RATE_HZ = 20; // 20Hz = 50ms between UI updates
+const UI_REFRESH_INTERVAL_MS = 1000 / UI_REFRESH_RATE_HZ;
+
+// Module-level state for throttling (not in Zustand to avoid triggering updates)
+let pendingSample: StreamSample | null = null;
+let pendingGroundTruth: GroundTruth | null = null;
+let pendingSampleCount = 0;
+let lastUIUpdateTime = 0;
+let throttleTimerId: ReturnType<typeof setTimeout> | null = null;
+let sampleTimestamps: number[] = [];
+
 // Rate calculation window
 const RATE_WINDOW_MS = 1000;
-let sampleTimestamps: number[] = [];
 
 export const createUnifiedStreamSlice: StateCreator<
   UnifiedStreamSlice,
@@ -135,6 +155,15 @@ export const createUnifiedStreamSlice: StateCreator<
       activeStreamSource.disconnect();
     }
     
+    // Clear throttle timer
+    if (throttleTimerId) {
+      clearTimeout(throttleTimerId);
+      throttleTimerId = null;
+    }
+    pendingSample = null;
+    pendingGroundTruth = null;
+    pendingSampleCount = 0;
+    
     set({
       streamConnectionState: 'disconnected',
       streamError: null,
@@ -143,24 +172,39 @@ export const createUnifiedStreamSlice: StateCreator<
 
   receiveStreamSample: (sample: StreamSample, groundTruth?: GroundTruth) => {
     const now = performance.now();
-    const { streamBuffer, streamSamplesReceived } = get();
+    const { streamBuffer } = get();
     
-    // Add to buffer
+    // ALWAYS add to buffer immediately (no delay for data integrity)
     streamBuffer.push(sample);
     
-    // Calculate effective sample rate
+    // Track sample timestamps for rate calculation
     sampleTimestamps.push(now);
     const cutoff = now - RATE_WINDOW_MS;
-    sampleTimestamps = sampleTimestamps.filter(t => t > cutoff);
-    const effectiveRate = sampleTimestamps.length * (1000 / RATE_WINDOW_MS);
+    // Use a more efficient filter - only filter when array gets large
+    if (sampleTimestamps.length > 500) {
+      sampleTimestamps = sampleTimestamps.filter(t => t > cutoff);
+    }
     
-    set({
-      currentStreamSample: sample,
-      currentGroundTruth: groundTruth ?? null,
-      streamSamplesReceived: streamSamplesReceived + 1,
-      streamLastSampleTime: now,
-      streamEffectiveSampleRate: Math.round(effectiveRate),
-    });
+    // Store pending sample (will be flushed on next UI update)
+    pendingSample = sample;
+    pendingGroundTruth = groundTruth ?? null;
+    pendingSampleCount++;
+    
+    // Throttled UI update: only update React state at UI_REFRESH_RATE_HZ
+    const timeSinceLastUpdate = now - lastUIUpdateTime;
+    
+    if (timeSinceLastUpdate >= UI_REFRESH_INTERVAL_MS) {
+      // Enough time has passed, update immediately
+      flushToReactState(set, get, now);
+    } else if (!throttleTimerId) {
+      // Schedule an update for the remaining time
+      const remainingTime = UI_REFRESH_INTERVAL_MS - timeSinceLastUpdate;
+      throttleTimerId = setTimeout(() => {
+        throttleTimerId = null;
+        flushToReactState(set, get, performance.now());
+      }, remainingTime);
+    }
+    // If timer already scheduled, do nothing - it will pick up the latest sample
   },
 
   setStreamConnectionState: (state: StreamConnectionState, error?: string) => {
@@ -171,8 +215,18 @@ export const createUnifiedStreamSlice: StateCreator<
   },
 
   clearStreamBuffer: () => {
-    get().streamBuffer.clear();
+    // Clear throttle state
+    if (throttleTimerId) {
+      clearTimeout(throttleTimerId);
+      throttleTimerId = null;
+    }
+    pendingSample = null;
+    pendingGroundTruth = null;
+    pendingSampleCount = 0;
+    lastUIUpdateTime = 0;
     sampleTimestamps = [];
+    
+    get().streamBuffer.clear();
     set({
       currentStreamSample: null,
       currentGroundTruth: null,
@@ -181,3 +235,36 @@ export const createUnifiedStreamSlice: StateCreator<
     });
   },
 });
+
+/**
+ * Flush pending samples to React state.
+ * Called at throttled intervals to prevent excessive re-renders.
+ */
+function flushToReactState(
+  set: (state: Partial<UnifiedStreamSlice>) => void,
+  get: () => UnifiedStreamSlice,
+  now: number
+) {
+  if (!pendingSample) return;
+  
+  const { streamSamplesReceived } = get();
+  
+  // Calculate effective sample rate from timestamps
+  const cutoff = now - RATE_WINDOW_MS;
+  const recentTimestamps = sampleTimestamps.filter(t => t > cutoff);
+  const effectiveRate = recentTimestamps.length * (1000 / RATE_WINDOW_MS);
+  
+  // Batch update: all pending samples counted, but only latest sample in state
+  set({
+    currentStreamSample: pendingSample,
+    currentGroundTruth: pendingGroundTruth,
+    streamSamplesReceived: streamSamplesReceived + pendingSampleCount,
+    streamLastSampleTime: now,
+    streamEffectiveSampleRate: Math.round(effectiveRate),
+  });
+  
+  // Reset pending state
+  lastUIUpdateTime = now;
+  pendingSampleCount = 0;
+  // Keep pendingSample/pendingGroundTruth for reference until next sample arrives
+}
