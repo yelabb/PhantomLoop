@@ -1,5 +1,7 @@
 // Decoder types for BCI algorithm integration
 
+import type { ElectrodeConfiguration, SpatialFeatures } from './electrodes';
+
 export type DecoderType = 'javascript' | 'tfjs' | 'wasm';
 
 export type TFJSModelType = 'linear' | 'mlp' | 'lstm' | 'attention' | 'kalman-neural';
@@ -68,4 +70,9 @@ export interface DecoderInput {
     vy: number;
   };
   history?: DecoderOutput[];
+  
+  // Electrode-aware features (optional)
+  electrodeConfig?: ElectrodeConfiguration;
+  spatialFeatures?: SpatialFeatures;
+  channelMask?: boolean[]; // Active/inactive channels
 }

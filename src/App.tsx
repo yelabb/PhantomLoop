@@ -1,13 +1,20 @@
 // PhantomLoop - The Neural Gauntlet Arena
 
+import { useState } from 'react';
 import { ResearchDashboard } from './components/ResearchDashboard';
 import { WelcomeScreen } from './components/WelcomeScreen';
+import { ElectrodePlacementScreen } from './components/ElectrodePlacementScreen';
 import { useMessagePack } from './hooks/useMessagePack';
 import { useDecoder } from './hooks/useDecoder';
 import { usePerformance } from './hooks/usePerformance';
 import { useStore } from './store';
 
+type AppScreen = 'welcome' | 'electrode-placement' | 'dashboard';
+
 function App() {
+  // Navigation state
+  const [currentScreen, setCurrentScreen] = useState<AppScreen>('welcome');
+  
   // Check connection state
   const isConnected = useStore((state) => state.isConnected);
   
@@ -18,11 +25,21 @@ function App() {
 
   return (
     <div className="w-screen h-screen overflow-hidden bg-black relative">
-      {/* Welcome screen when not connected */}
-      {!isConnected && <WelcomeScreen />}
+      {/* Welcome screen */}
+      {currentScreen === 'welcome' && (
+        <WelcomeScreen onContinue={() => setCurrentScreen('electrode-placement')} />
+      )}
+      
+      {/* Electrode placement screen */}
+      {currentScreen === 'electrode-placement' && (
+        <ElectrodePlacementScreen 
+          onBack={() => setCurrentScreen('welcome')}
+          onContinue={() => setCurrentScreen('dashboard')}
+        />
+      )}
       
       {/* Research Dashboard */}
-      <ResearchDashboard />
+      {currentScreen === 'dashboard' && <ResearchDashboard />}
     </div>
   );
 }

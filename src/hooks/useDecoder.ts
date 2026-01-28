@@ -5,17 +5,20 @@ import { useEffect, useRef, useCallback } from 'react';
 import { useStore } from '../store';
 import { executeDecoder, clearDecoderCache } from '../decoders/executeDecoder';
 import { clearHistory as clearTFJSHistory } from '../decoders/tfjsInference';
+import { extractSpatialFeatures, createChannelMask } from '../utils/spatialFeatures';
 import type { DecoderInput, DecoderOutput } from '../types/decoders';
 
 // Use selectors to prevent unnecessary re-renders
 const selectCurrentPacket = (state: ReturnType<typeof useStore.getState>) => state.currentPacket;
 const selectActiveDecoder = (state: ReturnType<typeof useStore.getState>) => state.activeDecoder;
+const selectElectrodeConfig = (state: ReturnType<typeof useStore.getState>) => state.electrodeConfig;
 const selectUpdateDecoderOutput = (state: ReturnType<typeof useStore.getState>) => state.updateDecoderOutput;
 const selectUpdateDecoderLatency = (state: ReturnType<typeof useStore.getState>) => state.updateDecoderLatency;
 
 export function useDecoder() {
   const currentPacket = useStore(selectCurrentPacket);
   const activeDecoder = useStore(selectActiveDecoder);
+  const electrodeConfig = useStore(selectElectrodeConfig);
   const updateDecoderOutput = useStore(selectUpdateDecoderOutput);
   const updateDecoderLatency = useStore(selectUpdateDecoderLatency);
 
@@ -47,6 +50,16 @@ export function useDecoder() {
         },
         history: historyRef.current,
       };
+
+      // Add electrode-aware features if configuration is available
+      if (electrodeConfig) {
+        input.electrodeConfig = electrodeConfig;
+        input.spatialFeatures = extractSpatialFeatures(
+          currentPacket.data.spikes.spike_counts,
+          electrodeConfig
+        );
+        input.channelMask = createChannelMask(electrodeConfig);
+      }
 
       // Execute decoder (async for TFJS, sync for JS)
       const output = await executeDecoder(activeDecoder, input);

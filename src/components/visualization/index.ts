@@ -13,3 +13,6 @@ export { SpikeRasterPlot } from './SpikeRasterPlot';
 export { PopulationDynamics } from './PopulationDynamics';
 export { SpectralPowerPanel } from './SpectralPowerPanel';
 export { NeuronCorrelationMatrix } from './NeuronCorrelationMatrix';
+
+// Electrode Configuration
+export { ElectrodePlacementPanel } from './ElectrodePlacementPanel';
