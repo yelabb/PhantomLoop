@@ -1,16 +1,18 @@
 // Welcome Screen - First-time user onboarding
 
-import { memo, useState, useCallback } from 'react';
+import { memo, useState, useCallback, useEffect } from 'react';
 import { useStore } from '../store';
 import { SERVER_CONFIG } from '../utils/constants';
 import { Spinner } from './LoadingStates';
 
 interface WelcomeScreenProps {
   onContinue?: () => void;
+  onConnectToDashboard?: () => void;
 }
 
-export const WelcomeScreen = memo(function WelcomeScreen({ onContinue }: WelcomeScreenProps) {
+export const WelcomeScreen = memo(function WelcomeScreen({ onContinue, onConnectToDashboard }: WelcomeScreenProps) {
   const connectWebSocket = useStore((state) => state.connectWebSocket);
+  const isConnected = useStore((state) => state.isConnected);
   const connectionError = useStore((state) => state.connectionError);
   
   const [serverUrl, setServerUrl] = useState<string>(SERVER_CONFIG.BASE_URL);
@@ -58,6 +60,13 @@ export const WelcomeScreen = memo(function WelcomeScreen({ onContinue }: Welcome
       handleConnect();
     }
   }, [sessionInput, handleConnect]);
+
+  // Auto-navigate to dashboard when connected
+  useEffect(() => {
+    if (isConnected && onConnectToDashboard) {
+      onConnectToDashboard();
+    }
+  }, [isConnected, onConnectToDashboard]);
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black">
