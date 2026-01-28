@@ -460,6 +460,15 @@ export function ElectrodePlacementScreen({ onBack, onContinue }: ElectrodePlacem
               </button>
             )}
 
+            {onContinue && (
+              <button
+                onClick={onContinue}
+                className="px-6 py-3 bg-biolink/20 hover:bg-biolink/30 border border-biolink/50 rounded-lg transition-colors font-semibold"
+              >
+                Done →
+              </button>
+            )}
+
             <div className="flex gap-2">
               <button
                 onClick={() => electrodeConfig && downloadConfiguration(electrodeConfig, 'json')}

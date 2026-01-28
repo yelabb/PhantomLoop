@@ -40,7 +40,6 @@ function App() {
       {/* Welcome screen */}
       {currentScreen === 'welcome' && (
         <WelcomeScreen 
-          onContinue={() => setCurrentScreen('electrode-placement')}
           onConnectToDashboard={() => setCurrentScreen('dashboard')}
         />
       )}
@@ -54,7 +53,11 @@ function App() {
       )}
       
       {/* Research Dashboard */}
-      {currentScreen === 'dashboard' && <ResearchDashboard />}
+      {currentScreen === 'dashboard' && (
+        <ResearchDashboard 
+          onConfigureElectrodes={() => setCurrentScreen('electrode-placement')}
+        />
+      )}
     </div>
   );
 }
