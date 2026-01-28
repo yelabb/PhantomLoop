@@ -1,10 +1,14 @@
 /**
- * Electrode configuration types for Cerelog esp-eeg integration
- * Supports electrode placement, impedance monitoring, and Brainflow export
+ * Electrode configuration types for Cerelog ESP-EEG integration
+ * Supports electrode placement, signal quality monitoring, and Brainflow export
+ * 
+ * IMPORTANT: Cerelog ESP-EEG uses ADS1299 chip which does NOT support impedance measurement.
+ * Signal quality is estimated from signal amplitude/noise characteristics.
+ * The "impedance" values shown in the UI are pseudo-impedance for user familiarity.
  */
 
 export type DeviceType = 'esp-eeg' | 'brainflow' | 'phantomlink';
-export type ConnectionProtocol = 'websocket' | 'serial' | 'lsl';
+export type ConnectionProtocol = 'websocket' | 'serial' | 'lsl' | 'tcp';
 export type MontageName = '10-20' | '10-10' | 'custom';
 
 /**
@@ -73,12 +77,22 @@ export interface DataSource {
 }
 
 /**
- * Impedance measurement data
+ * Impedance/Signal quality measurement data
+ * 
+ * NOTE: Cerelog ESP-EEG (ADS1299) does NOT have true impedance measurement.
+ * The "impedance" field contains a PSEUDO-IMPEDANCE estimated from signal amplitude.
+ * This provides a familiar metric for users, though it's not physically accurate.
+ * 
+ * Quality is derived from signal characteristics:
+ * - 'good': Normal EEG amplitude range (~5-100µV std)
+ * - 'fair': Slightly elevated noise (~100-200µV std)
+ * - 'poor': High noise/artifacts (~200-500µV std)
+ * - 'disconnected': Flatline (<5µV) or saturated (>500µV)
  */
 export interface ImpedanceData {
   channelId: number;
   electrodeId: string;
-  impedance: number; // kΩ
+  impedance: number; // kΩ - PSEUDO-IMPEDANCE derived from signal amplitude
   timestamp: number;
   quality: 'good' | 'fair' | 'poor' | 'disconnected';
 }

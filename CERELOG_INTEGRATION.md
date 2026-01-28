@@ -1,20 +1,44 @@
 # Cerelog ESP-EEG Integration
 
-This branch adds electrode placement and impedance monitoring functionality for the Cerelog ESP-EEG device, preparing PhantomLoop for the transition to Brainflow.
+This branch adds electrode placement and signal quality monitoring for the Cerelog ESP-EEG device, preparing PhantomLoop bridge to Brainflow.
+
+## ⚠️ Important Protocol Information
+
+**The Cerelog ESP-EEG uses TCP sockets, NOT WebSocket.**
+
+Browsers cannot open raw TCP connections, so you need either:
+1. **WebSocket Bridge** (Python script included) - for browser access
+2. **Direct Python/LSL access** - for Python-based workflows
+
+### Hardware Details
+- **Chip**: Texas Instruments ADS1299 (24-bit ADC)
+- **Channels**: 8 EEG channels
+- **Sample Rate**: 250 SPS
+- **WiFi AP**: SSID `CERELOG_EEG`, Password `cerelog123`
+- **Device IP**: `192.168.4.1`
+- **TCP Data Port**: `1112` (binary stream)
+- **UDP Discovery Port**: `4445`
+
+### ⚡ No Impedance Measurement!
+The ADS1299 chip does NOT support impedance measurement. Signal quality is **estimated from signal amplitude characteristics**:
+- **Good**: Normal EEG amplitude (~5-100µV std)
+- **Fair**: Elevated noise (~100-200µV std)
+- **Poor**: High noise (~200-500µV std)
+- **Disconnected**: Flatline (<5µV) or saturated (>500µV)
 
 ## What's New
 
 ### 🎯 Electrode Placement Screen
-- **Interactive electrode configuration UI** with support for 8, 16, 32, and 64-channel setups
+- **Interactive electrode configuration UI** with support for 8, 16, 32-channel setups
 - **Standard 10-20 montage** with predefined positions for common EEG electrodes
-- **Real-time impedance monitoring** with color-coded quality indicators
-- **Visual electrode layout** showing spatial positions and connection quality
+- **Real-time signal quality monitoring** with color-coded quality indicators
+- **Visual electrode layout** showing spatial positions and signal quality
 
 ### 📡 ESP-EEG Device Support
-- **WebSocket connection** to Cerelog ESP-EEG devices (default: `ws://192.168.4.1:81`)
-- **Live impedance streaming** with automatic quality assessment
+- **TCP binary protocol** parsing (via WebSocket bridge)
+- **Live signal quality estimation** from EEG amplitude
 - **Connection status monitoring** with auto-reconnect functionality
-- **Dual data source support** - can switch between PhantomLink and ESP-EEG
+- **Protocol info display** showing device specs
 
 ### 🧠 Electrode-Aware Decoding
 - **Spatial feature extraction** - ROI averages, spatial gradients, neighborhood correlations
@@ -24,7 +48,7 @@ This branch adds electrode placement and impedance monitoring functionality for 
 
 ### 📤 Brainflow Export Utilities
 - **JSON export** - Full electrode configuration in Brainflow-compatible format
-- **CSV export** - Spreadsheet-friendly electrode data with positions and impedances
+- **CSV export** - Spreadsheet-friendly electrode data with positions
 - **Python code generation** - Ready-to-use Brainflow integration script
 - **Import/export workflow** - Save validated configurations for future sessions
 
@@ -32,35 +56,36 @@ This branch adds electrode placement and impedance monitoring functionality for 
 
 ### 1. Access Electrode Placement
 
-The ElectrodePlacementScreen is now **fully integrated** into the app navigation:
+The ElectrodePlacementScreen is **fully integrated** into the app navigation:
 
 **User Flow:**
 1. **WelcomeScreen** - Click "Configure Electrodes (ESP-EEG)" button
-2. **ElectrodePlacementScreen** - Set up electrodes and monitor impedance
+2. **ElectrodePlacementScreen** - Set up electrodes and monitor signal quality
 3. **ResearchDashboard** - Click "Proceed to Dashboard →" when ready
 
-**Navigation Path:**
-```
-WelcomeScreen → ElectrodePlacementScreen → ResearchDashboard
-     ↓                    ↓                          ↓
-   Start         Configure Electrodes          View Decoders
-```
+### 2. Connect to ESP-EEG (Via Bridge)
 
-You can navigate back at any time using the "← Back" button.
+```bash
+# Step 1: Connect to ESP-EEG WiFi
+# SSID: CERELOG_EEG
+# Password: cerelog123
 
-### 2. Connect to ESP-EEG
-1. Power on your Cerelog ESP-EEG device
-2. Connect to the ESP32 WiFi AP (usually `ESP-EEG-XXXX`)
-3. Open PhantomLoop and navigate to Electrode Placement
-4. Enter WebSocket URL (default: `ws://192.168.4.1:81`)
-5. Click "Connect to ESP-EEG"
-6. Monitor impedances in real-time
+# Step 2: Install the bridge dependency
+pip install websockets
+
+# Step 3: Run the WebSocket bridge
+cd scripts
+python cerelog_ws_bridge.py
+
+# Step 4: In PhantomLoop, connect to:
+# ws://localhost:8765
+```
 
 ### 3. Configure Electrodes
-- Select channel count (8/16/32/64)
+- Select channel count (8/16/32)
 - Choose montage type (10-20/10-10/custom)
 - Apply configuration
-- Verify impedance quality (target: <5 kΩ for "good")
+- Monitor signal quality in real-time
 
 ### 4. Export to Brainflow
 ```typescript
@@ -86,14 +111,14 @@ src/
 ├── store/slices/
 │   └── electrodeSlice.ts          # Electrode state management
 ├── hooks/
-│   └── useESPEEG.ts               # ESP-EEG WebSocket connection
+│   └── useESPEEG.ts               # ESP-EEG connection (via WS bridge)
 ├── utils/
 │   ├── spatialFeatures.ts         # Spatial feature extraction
 │   └── brainflowExport.ts         # Brainflow export utilities
-└── components/
-    ├── ElectrodePlacementScreen.tsx
-    └── visualization/
-        └── ElectrodePlacementPanel.tsx
+├── components/
+│   └── ElectrodePlacementScreen.tsx
+└── scripts/
+    └── cerelog_ws_bridge.py       # WebSocket-to-TCP bridge
 ```
 
 ### Updated Files
@@ -105,86 +130,73 @@ src/
 ## Data Flow
 
 ```
-ESP-EEG Device
-    ↓ (WebSocket)
+Cerelog ESP-EEG Device
+    ↓ (TCP binary, port 1112)
+cerelog_ws_bridge.py
+    ↓ (WebSocket JSON)
 useESPEEG Hook
-    ↓
+    ↓ (signal quality estimation)
 electrodeSlice (Zustand)
     ↓
 ElectrodePlacementScreen (UI)
     ↓ (validation complete)
 Brainflow Export
-    ↓
-PhantomLink / Brainflow Fork
 ```
 
-## Impedance Quality Thresholds
+## ESP-EEG Binary Protocol
 
-- **Good**: < 5 kΩ (green)
-- **Fair**: 5-10 kΩ (yellow)
-- **Poor**: 10-20 kΩ (orange)
-- **Disconnected**: > 20 kΩ or no signal (red)
+The Cerelog ESP-EEG streams binary packets on TCP port 1112.
 
-## Next Steps
+### Packet Structure (37 bytes)
 
-### Before Brainflow Fork
-1. ✅ Electrode placement UI *(completed)*
-2. ✅ ESP-EEG connection *(completed)*
-3. ✅ Impedance monitoring *(completed)*
-4. ✅ Brainflow export *(completed)*
-5. ⏳ Test with physical ESP-EEG device
-6. ⏳ Validate impedance readings
-7. ⏳ Fine-tune spatial features
+| Byte  | Field          | Description                                |
+|-------|----------------|--------------------------------------------|
+| 0-1   | Start Marker   | 0xABCD (big-endian)                        |
+| 2     | Length         | 31 (fixed)                                 |
+| 3-6   | Timestamp      | uint32, ms since connection (big-endian)   |
+| 7-9   | ADS1299 Status | 3 status bytes                             |
+| 10-33 | Channel Data   | 8 ch × 3 bytes (24-bit signed, big-endian) |
+| 34    | Checksum       | (sum of bytes 2-33) & 0xFF                 |
+| 35-36 | End Marker     | 0xDCBA (big-endian)                        |
 
-### After Brainflow Fork
-1. Replace PhantomLink WebSocket with Brainflow streaming
-2. Implement live EEG data parsing
-3. Add artifact detection/rejection
-4. Enhance spatial decoders with validated electrode positions
-5. Support multiple board types (OpenBCI, Muse, etc.)
+### Converting Raw Values to Microvolts
 
-## ESP-EEG Message Protocol
+```python
+# ADS1299 voltage conversion
+VREF = 4.50  # Reference voltage
+GAIN = 24   # Gain setting
 
-The `useESPEEG` hook expects messages in this format:
+def to_microvolts(raw_24bit):
+    # Sign extend 24-bit to 32-bit
+    if raw_24bit & 0x800000:
+        raw_24bit = raw_24bit - 0x1000000
+    
+    scale = (2 * VREF / GAIN) / (2**24)
+    return raw_24bit * scale * 1e6
+```
 
-### Impedance Message
+### WebSocket Bridge Protocol
+
+The `cerelog_ws_bridge.py` converts binary packets to JSON for browser consumption:
+
 ```json
 {
-  "type": "impedance",
-  "timestamp": 1234567890,
-  "payload": {
-    "channels": [
-      { "channel": 0, "impedance": 4.2 },
-      { "channel": 1, "impedance": 5.8 },
-      ...
-    ]
-  }
+  "type": "sample",
+  "timestamp": 1234,
+  "status": 12345,
+  "channels": [-12.3, 45.6, -78.9, 23.4, -56.7, 89.0, -12.3, 45.6]
 }
 ```
 
-### Data Message (for future streaming)
-```json
-{
-  "type": "data",
-  "timestamp": 1234567890,
-  "payload": {
-    "samples": [[...], [...], ...],
-    "sampleRate": 250
-  }
-}
-```
+### Device Discovery (UDP)
 
-### Status Message
-```json
-{
-  "type": "status",
-  "timestamp": 1234567890,
-  "payload": {
-    "connected": true,
-    "battery": 85,
-    "error": null
-  }
-}
+```python
+# Send to 255.255.255.255:4445
+b"CERELOG_FIND_ME"
+
+# Device responds with
+b"CERELOG_HERE"
+```
 ```
 
 ## Spatial Features
