@@ -457,8 +457,14 @@ export function ElectrodePlacementScreen({ onBack, onContinue }: ElectrodePlacem
           </div>
         </div>
 
-        {/* Action Buttons */}
-        <div className="mt-8 flex justify-between items-center">
+        {/* Spacer for fixed bottom bar */}
+        <div className="h-24" />
+      </motion.div>
+      </div>
+
+      {/* Fixed Action Buttons */}
+      <div className="fixed bottom-0 left-0 right-0 bg-gray-900/95 backdrop-blur-sm border-t border-white/10 px-8 py-4 z-50">
+        <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div className="flex gap-3">
             {onBack && (
               <button
@@ -466,15 +472,6 @@ export function ElectrodePlacementScreen({ onBack, onContinue }: ElectrodePlacem
                 className="px-6 py-3 bg-gray-500/20 hover:bg-gray-500/30 border border-gray-500/50 rounded-lg transition-colors"
               >
                 ← Back
-              </button>
-            )}
-
-            {onContinue && (
-              <button
-                onClick={onContinue}
-                className="px-6 py-3 bg-biolink/20 hover:bg-biolink/30 border border-biolink/50 rounded-lg transition-colors font-semibold"
-              >
-                Done →
               </button>
             )}
 
@@ -505,8 +502,16 @@ export function ElectrodePlacementScreen({ onBack, onContinue }: ElectrodePlacem
               </button>
             </div>
           </div>
+
+          {onContinue && (
+            <button
+              onClick={onContinue}
+              className="px-6 py-3 bg-biolink/20 hover:bg-biolink/30 border border-biolink/50 rounded-lg transition-colors font-semibold"
+            >
+              Done →
+            </button>
+          )}
         </div>
-      </motion.div>
       </div>
     </div>
   );
