@@ -83,6 +83,10 @@ export const ResearchDashboard = memo(function ResearchDashboard({ onConfigureEl
   const currentPacket = useStore((state) => state.currentPacket);
   const decoderOutput = useStore((state) => state.decoderOutput);
   const updateAccuracy = useStore((state) => state.updateAccuracy);
+  const dataSource = useStore((state) => state.dataSource);
+  
+  // Determine if current data source has ground truth for accuracy metrics
+  const hasGroundTruth = dataSource?.type !== 'esp-eeg';
   
   // Panel ordering state with localStorage persistence
   // Extended with new research panels for dream dashboard
@@ -289,12 +293,23 @@ export const ResearchDashboard = memo(function ResearchDashboard({ onConfigureEl
       case 'temporal':
         return <TemporalInspector />;
       case 'accuracy':
-        return (
+        return hasGroundTruth ? (
           <>
             <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">
               Accuracy History
             </h3>
             <AccuracyGauge accuracy={currentAccuracy} error={currentError} />
+          </>
+        ) : (
+          <>
+            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">
+              Signal Quality
+            </h3>
+            <div className="text-center py-8 text-gray-500">
+              <div className="text-4xl mb-2">📊</div>
+              <p className="text-sm">No ground truth available</p>
+              <p className="text-xs mt-1">ESP-EEG provides signal quality metrics instead</p>
+            </div>
           </>
         );
       case 'waterfall':
