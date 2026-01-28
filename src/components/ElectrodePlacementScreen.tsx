@@ -154,7 +154,8 @@ export function ElectrodePlacementScreen({ onBack, onContinue }: ElectrodePlacem
   const hasGoodConnection = qualityStats.good > channelCount * 0.7;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-black text-white p-8">
+    <div className="fixed inset-0 bg-gradient-to-br from-gray-900 via-purple-900 to-black text-white overflow-y-auto">
+      <div className="min-h-full p-8">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -207,7 +208,15 @@ export function ElectrodePlacementScreen({ onBack, onContinue }: ElectrodePlacem
                     placeholder="ws://localhost:8765"
                   />
                   <p className="text-xs text-gray-500 mt-1">
-                    Connects to a local bridge that proxies TCP data from the ESP-EEG
+                    Connects to a local bridge that proxies TCP data from the ESP-EEG.{' '}
+                    <a
+                      href="https://github.com/yelabb/PhantomLoop/blob/main/CERELOG_INTEGRATION.md"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-biolink hover:text-biolink/80 underline"
+                    >
+                      Setup guide →
+                    </a>
                   </p>
                 </div>
 
@@ -498,6 +507,7 @@ export function ElectrodePlacementScreen({ onBack, onContinue }: ElectrodePlacem
           </div>
         </div>
       </motion.div>
+      </div>
     </div>
   );
 }
