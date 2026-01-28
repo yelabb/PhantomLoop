@@ -487,16 +487,6 @@ export function ElectrodePlacementScreen({ onBack, onContinue }: ElectrodePlacem
               </button>
             </div>
           </div>
-
-          {onContinue && (
-            <button
-              onClick={onContinue}
-              disabled={!hasGoodConnection}
-              className="px-8 py-3 bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 rounded-lg font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Proceed to Dashboard →
-            </button>
-          )}
         </div>
       </motion.div>
     </div>
