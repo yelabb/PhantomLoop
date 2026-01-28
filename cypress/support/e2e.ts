@@ -9,7 +9,8 @@
 import './commands';
 
 // Prevent uncaught exceptions from failing tests
-Cypress.on('uncaught:exception', (err, runnable) => {
+Cypress.on('uncaught:exception', (err, _runnable) => {
+  void _runnable; // Explicitly mark as intentionally unused
   // Returning false here prevents Cypress from failing the test
   // This is useful for third-party errors or expected WebSocket disconnections
   console.warn('Uncaught exception:', err.message);

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-expressions */
 /**
  * Decoder Selector E2E Tests
  * Tests for neural decoder selection and management
@@ -32,7 +33,7 @@ describe('Code Editor', () => {
     // Monaco editor uses specific class names
     cy.window().then((win) => {
       // Check if Monaco is loaded (it may lazy-load)
-      expect(win).to.exist;
+      expect(win).to.not.be.undefined;
     });
   });
 });

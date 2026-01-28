@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-expressions */
 /**
  * Research Dashboard E2E Tests
  * Tests the main dashboard functionality including panels and visualizations
@@ -100,8 +101,11 @@ describe('Dashboard Components', () => {
       const rightPanels = win.localStorage.getItem('phantomloop-right-panels-v2');
       const lockedPanels = win.localStorage.getItem('phantomloop-locked-panels');
       
-      // After first load, these should be set
-      // They may be null on first visit, then set after
+      // After first load, these may be null or set
+      // Verify the keys are accessible (values may be null on first visit)
+      expect(leftPanels === null || typeof leftPanels === 'string').to.be.true;
+      expect(rightPanels === null || typeof rightPanels === 'string').to.be.true;
+      expect(lockedPanels === null || typeof lockedPanels === 'string').to.be.true;
     });
   });
 });

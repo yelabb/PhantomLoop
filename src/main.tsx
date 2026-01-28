@@ -14,7 +14,7 @@ async function initializeTensorFlow() {
       await tf.ready();
       console.log('[PhantomLoop] TensorFlow.js initialized with WebGPU backend');
       return;
-    } catch (e) {
+    } catch {
       console.log('[PhantomLoop] WebGPU not available, trying WebGL...');
     }
 
@@ -24,7 +24,7 @@ async function initializeTensorFlow() {
       await tf.ready();
       console.log('[PhantomLoop] TensorFlow.js initialized with WebGL backend');
       return;
-    } catch (e) {
+    } catch {
       console.log('[PhantomLoop] WebGL not available, using CPU backend');
     }
 

@@ -1,6 +1,6 @@
 // PhantomLoop - The Neural Gauntlet Arena
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ResearchDashboard } from './components/ResearchDashboard';
 import { WelcomeScreen } from './components/WelcomeScreen';
 import { ElectrodePlacementScreen } from './components/ElectrodePlacementScreen';
@@ -24,10 +24,15 @@ function App() {
   usePerformance();
 
   // Handle disconnection - return to welcome screen
+  // Track previous connection state to detect disconnect
+  const wasConnectedRef = useRef(false);
+  
   useEffect(() => {
-    if (!isConnected && currentScreen === 'dashboard') {
+    if (wasConnectedRef.current && !isConnected && currentScreen === 'dashboard') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCurrentScreen('welcome');
     }
+    wasConnectedRef.current = isConnected;
   }, [isConnected, currentScreen]);
 
   return (

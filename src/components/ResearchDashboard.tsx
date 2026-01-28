@@ -1,7 +1,7 @@
 // Research Dashboard - Optimized visualization for BCI researchers
 // Clear at-a-glance decoder performance with deep drill-down capability
 
-import { memo, useState, useMemo, useEffect } from 'react';
+import { memo, useState, useMemo, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { CenterOutArena } from './visualization/CenterOutArena';
 import { AccuracyGauge } from './visualization/AccuracyGauge';
@@ -127,14 +127,22 @@ export const ResearchDashboard = memo(function ResearchDashboard() {
     });
   };
 
+  // Panel balancing - runs once on mount
+  // Using useRef to track if already balanced avoids needing allPanels in deps
+  const hasBalanced = useRef(false);
   useEffect(() => {
+    if (hasBalanced.current) return;
+    hasBalanced.current = true;
+    
+    // Get panel lists from current state
+    const currentAllPanels = allPanels;
+    
     // Ensure all panels exist and balance between sidebars
     setLeftPanelOrder((left) => {
-      const right = rightPanelOrder;
-      const combined = new Set([...left, ...right]);
-      const missing = allPanels.filter((panel) => !combined.has(panel));
+      const combined = new Set([...left, ...rightPanelOrder]);
+      const missing = currentAllPanels.filter((panel) => !combined.has(panel));
       let nextLeft = [...left, ...missing];
-      let nextRight = right.filter((panel) => allPanels.includes(panel));
+      let nextRight = rightPanelOrder.filter((panel) => currentAllPanels.includes(panel));
 
       // Remove duplicates
       nextLeft = nextLeft.filter((panel, idx) => nextLeft.indexOf(panel) === idx);
@@ -153,6 +161,7 @@ export const ResearchDashboard = memo(function ResearchDashboard() {
       setRightPanelOrder(nextRight);
       return nextLeft;
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   
   // Calculate and update accuracy continuously

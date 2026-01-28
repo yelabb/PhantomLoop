@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-expressions */
 /**
  * Application Integration E2E Tests
  * Tests overall application behavior and state management
@@ -31,7 +32,7 @@ describe('State Management (Zustand)', () => {
   it('should initialize store correctly', () => {
     cy.window().then((win) => {
       // App should be functional
-      expect(win.document.body).to.exist;
+      expect(win.document.body).to.not.be.null;
     });
   });
 
@@ -112,9 +113,9 @@ describe('Browser Compatibility', () => {
     
     cy.window().then((win) => {
       // Check for required browser APIs
-      expect(win.WebSocket).to.exist;
-      expect(win.localStorage).to.exist;
-      expect(win.requestAnimationFrame).to.exist;
+      expect(win.WebSocket).to.not.be.undefined;
+      expect(win.localStorage).to.not.be.undefined;
+      expect(win.requestAnimationFrame).to.not.be.undefined;
     });
   });
 });
@@ -141,7 +142,7 @@ describe('API Integration', () => {
   it('should handle CORS properly', () => {
     // App should handle cross-origin requests
     cy.window().then((win) => {
-      expect(win.fetch).to.exist;
+      expect(win.fetch).to.not.be.undefined;
     });
   });
 });

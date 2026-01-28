@@ -186,9 +186,11 @@ const ErrorHistogram = memo(function ErrorHistogram({
 
 export const AccuracyGauge = memo(function AccuracyGauge({
   accuracy,
-  error: _error,
+  // error prop intentionally unused - kept for API compatibility
+  error: _unusedError = 0,
   historyLength = 60,
 }: AccuracyGaugeProps) {
+  void _unusedError; // Explicitly mark as intentionally unused
   // Get history from store (maintained in metricsSlice)
   const accuracyHistory = useStore((state) => state.accuracyHistory);
   const sessionErrorAll = useStore((state) => state.sessionErrorAll);

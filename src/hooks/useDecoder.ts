@@ -78,6 +78,8 @@ export function useDecoder() {
     } finally {
       isProcessingRef.current = false;
     }
+    // electrodeConfig intentionally omitted - only used for optional spatial features
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPacket, activeDecoder, updateDecoderOutput, updateDecoderLatency]);
 
   // Run decoder when packet changes
