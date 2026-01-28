@@ -80,6 +80,18 @@ export interface ChannelStats {
   estimatedImpedance: number; // Pseudo-impedance for UI (kΩ)
 }
 
+// Demo mode configuration
+export interface DemoModeConfig {
+  // Electrode quality scenario
+  scenario: 'all-good' | 'mixed' | 'poor-contact' | 'realistic' | 'custom';
+  // Custom channel qualities (only used when scenario='custom')
+  customQualities?: ('good' | 'fair' | 'poor' | 'disconnected')[];
+  // Simulate alpha waves (8-12Hz oscillation)
+  simulateAlpha?: boolean;
+  // Add motion artifacts occasionally
+  simulateArtifacts?: boolean;
+}
+
 /**
  * Parse ADS1299 24-bit signed value to µV
  * Based on: Python_wifi_LSL.py voltage conversion
@@ -212,6 +224,10 @@ export function useESPEEG() {
     }))
   );
   const [packetCount, setPacketCount] = useState(0);
+  const [isDemoMode, setIsDemoMode] = useState(false);
+  const demoIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const demoConfigRef = useRef<DemoModeConfig>({ scenario: 'realistic' });
+  const demoTimeRef = useRef(0);
 
   /**
    * Calculate channel statistics from buffered samples and update store
@@ -263,6 +279,176 @@ export function useESPEEG() {
       }
     }
   }, [batchUpdateImpedances]);
+
+  /**
+   * Generate a single demo EEG sample with realistic characteristics
+   */
+  const generateDemoSample = useCallback((): ESPEEGSample => {
+    const config = demoConfigRef.current;
+    const t = demoTimeRef.current;
+    demoTimeRef.current += 4; // 4ms per sample at 250 SPS
+    
+    // Determine quality for each channel based on scenario
+    let qualities: ('good' | 'fair' | 'poor' | 'disconnected')[];
+    
+    switch (config.scenario) {
+      case 'all-good':
+        qualities = Array(8).fill('good');
+        break;
+      case 'mixed':
+        qualities = ['good', 'good', 'fair', 'good', 'poor', 'good', 'disconnected', 'good'];
+        break;
+      case 'poor-contact':
+        qualities = ['poor', 'fair', 'poor', 'disconnected', 'poor', 'fair', 'poor', 'disconnected'];
+        break;
+      case 'realistic': {
+        // Simulate real-world scenario: some electrodes need adjustment
+        // Qualities can slowly change over time
+        const timePhase = Math.floor(t / 10000) % 4;
+        if (timePhase === 0) {
+          qualities = ['good', 'good', 'fair', 'good', 'good', 'good', 'fair', 'good'];
+        } else if (timePhase === 1) {
+          qualities = ['good', 'fair', 'good', 'good', 'poor', 'good', 'good', 'good'];
+        } else if (timePhase === 2) {
+          qualities = ['fair', 'good', 'good', 'good', 'good', 'fair', 'good', 'good'];
+        } else {
+          qualities = ['good', 'good', 'good', 'fair', 'good', 'good', 'good', 'fair'];
+        }
+        break;
+      }
+      case 'custom':
+        qualities = config.customQualities || Array(8).fill('good');
+        break;
+      default:
+        qualities = Array(8).fill('good');
+    }
+    
+    // Generate channel values based on quality
+    const channels = qualities.map((quality, ch) => {
+      let baseNoise: number;
+      let amplitude: number;
+      
+      switch (quality) {
+        case 'good':
+          baseNoise = 20 + Math.random() * 30; // 20-50 µV
+          amplitude = 30;
+          break;
+        case 'fair':
+          baseNoise = 80 + Math.random() * 60; // 80-140 µV
+          amplitude = 50;
+          break;
+        case 'poor':
+          baseNoise = 200 + Math.random() * 150; // 200-350 µV
+          amplitude = 100;
+          break;
+        case 'disconnected':
+          // Either flatline or saturated
+          if (Math.random() > 0.5) {
+            return Math.random() * 2; // Flatline
+          } else {
+            return 800 + Math.random() * 200; // Saturated
+          }
+        default:
+          baseNoise = 50;
+          amplitude = 30;
+      }
+      
+      // Add Gaussian-ish noise
+      const noise = (Math.random() - 0.5) * baseNoise * 2;
+      
+      // Add alpha waves if enabled (8-12Hz)
+      let signal = noise;
+      if (config.simulateAlpha !== false) {
+        const alphaFreq = 10 + (ch * 0.3); // Slightly different per channel
+        const alpha = Math.sin(2 * Math.PI * alphaFreq * t / 1000) * amplitude * 0.5;
+        signal += alpha;
+        
+        // Add some beta (13-30Hz) for frontal channels
+        if (ch < 2) {
+          const beta = Math.sin(2 * Math.PI * 20 * t / 1000) * amplitude * 0.2;
+          signal += beta;
+        }
+      }
+      
+      // Add occasional artifacts
+      if (config.simulateArtifacts !== false && Math.random() < 0.002) {
+        signal += (Math.random() - 0.5) * 500; // Eye blink or movement artifact
+      }
+      
+      return signal;
+    });
+    
+    return {
+      timestamp: t,
+      channels,
+      status: 0,
+    };
+  }, []);
+
+  /**
+   * Start demo mode - generates realistic EEG data without hardware
+   */
+  const startDemoMode = useCallback((config?: Partial<DemoModeConfig>) => {
+    // Stop any existing demo
+    if (demoIntervalRef.current) {
+      clearInterval(demoIntervalRef.current);
+    }
+    
+    // Disconnect from real device if connected
+    if (wsRef.current) {
+      wsRef.current.close();
+      wsRef.current = null;
+    }
+    
+    // Configure demo
+    demoConfigRef.current = {
+      scenario: 'realistic',
+      simulateAlpha: true,
+      simulateArtifacts: true,
+      ...config,
+    };
+    demoTimeRef.current = 0;
+    sampleBufferRef.current = [];
+    setPacketCount(0);
+    setIsDemoMode(true);
+    setConnectionStatus('connecting');
+    setLastError(null);
+    
+    console.log('[ESP-EEG Demo] Starting demo mode with config:', demoConfigRef.current);
+    
+    // Simulate connection delay
+    setTimeout(() => {
+      setConnectionStatus('connected');
+      setSampleRate(250);
+      
+      // Generate samples at 250 SPS (every 4ms)
+      demoIntervalRef.current = setInterval(() => {
+        const sample = generateDemoSample();
+        sampleBufferRef.current.push(sample);
+        setPacketCount(prev => prev + 1);
+        
+        // Keep last 2 seconds of samples
+        const maxSamples = CERELOG_PROTOCOL.SAMPLING_RATE * 2;
+        if (sampleBufferRef.current.length > maxSamples) {
+          sampleBufferRef.current = sampleBufferRef.current.slice(-maxSamples);
+        }
+      }, 4);
+    }, 500);
+  }, [generateDemoSample]);
+
+  /**
+   * Stop demo mode
+   */
+  const stopDemoMode = useCallback(() => {
+    if (demoIntervalRef.current) {
+      clearInterval(demoIntervalRef.current);
+      demoIntervalRef.current = null;
+    }
+    setIsDemoMode(false);
+    setConnectionStatus('disconnected');
+    sampleBufferRef.current = [];
+    console.log('[ESP-EEG Demo] Demo mode stopped');
+  }, []);
 
   /**
    * Process incoming binary packet data
@@ -433,9 +619,16 @@ export function useESPEEG() {
   }, [isMonitoringImpedance, handleMessage]);
 
   /**
-   * Disconnect from ESP-EEG
+   * Disconnect from ESP-EEG (real or demo)
    */
   const disconnect = useCallback(() => {
+    // Stop demo mode if active
+    if (demoIntervalRef.current) {
+      clearInterval(demoIntervalRef.current);
+      demoIntervalRef.current = null;
+    }
+    setIsDemoMode(false);
+    
     if (reconnectTimeoutRef.current) {
       clearTimeout(reconnectTimeoutRef.current);
       reconnectTimeoutRef.current = null;
@@ -487,6 +680,7 @@ export function useESPEEG() {
     // Connection state
     connectionStatus,
     lastError,
+    isDemoMode,
     
     // Streaming stats
     sampleRate,
@@ -497,6 +691,10 @@ export function useESPEEG() {
     connect,
     disconnect,
     requestSignalCheck,
+    
+    // Demo mode
+    startDemoMode,
+    stopDemoMode,
     
     // Protocol info (for UI/documentation)
     protocolInfo: CERELOG_PROTOCOL,
