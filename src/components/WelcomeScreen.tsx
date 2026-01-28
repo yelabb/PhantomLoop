@@ -5,8 +5,12 @@ import { useStore } from '../store';
 import { SERVER_CONFIG } from '../utils/constants';
 import { Spinner } from './LoadingStates';
 import { useESPEEG } from '../hooks/useESPEEG';
+import { listDeviceProfiles, type DeviceProfile } from '../devices/deviceProfiles';
 
-type DataSourceType = 'phantomlink' | 'esp-eeg';
+type DataSourceType = 'phantomlink' | 'eeg-device';
+
+// Get all EEG device profiles for the dropdown
+const EEG_DEVICES = listDeviceProfiles().filter(d => d.manufacturer !== 'Simulation');
 
 interface WelcomeScreenProps {
   onConnectToDashboard?: () => void;
@@ -27,12 +31,31 @@ export const WelcomeScreen = memo(function WelcomeScreen({ onConnectToDashboard,
   } = useESPEEG();
   
   const [dataSourceType, setDataSourceType] = useState<DataSourceType>('phantomlink');
+  const [selectedDevice, setSelectedDevice] = useState<DeviceProfile>(
+    EEG_DEVICES.find(d => d.id === 'cerelog-esp-eeg') || EEG_DEVICES[0]
+  );
   const [serverUrl, setServerUrl] = useState<string>(SERVER_CONFIG.BASE_URL);
-  const [espEEGUrl, setEspEEGUrl] = useState<string>('ws://localhost:8765');
+  const [eegBridgeUrl, setEegBridgeUrl] = useState<string>('ws://localhost:8765');
   const [sessionInput, setSessionInput] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Update bridge URL when device changes
+  useEffect(() => {
+    const defaultUrls: Record<string, string> = {
+      'openbci-cyton': 'ws://localhost:8766',
+      'openbci-cyton-daisy': 'ws://localhost:8766',
+      'openbci-ganglion': 'ws://localhost:8767',
+      'neurosky-mindwave': 'ws://localhost:8768',
+      'muse-2': 'ws://localhost:8767',
+      'muse-s': 'ws://localhost:8767',
+      'emotiv-insight': 'ws://localhost:8769',
+      'emotiv-epoc-x': 'ws://localhost:8769',
+      'cerelog-esp-eeg': 'ws://localhost:8765',
+    };
+    setEegBridgeUrl(defaultUrls[selectedDevice.id] || 'ws://localhost:8765');
+  }, [selectedDevice]);
 
   const handleConnect = useCallback(async () => {
     if (sessionInput.trim()) {
@@ -75,16 +98,16 @@ export const WelcomeScreen = memo(function WelcomeScreen({ onConnectToDashboard,
   }, [sessionInput, handleConnect]);
 
   // Handle ESP-EEG connection
-  const handleConnectESPEEG = useCallback(() => {
+  const handleConnectEEG = useCallback(() => {
     setIsConnecting(true);
     setError(null);
     setDataSource({
-      type: 'esp-eeg',
-      url: espEEGUrl,
+      type: selectedDevice.id as 'esp-eeg',
+      url: eegBridgeUrl,
       protocol: 'websocket',
     });
-    connectESPEEG(espEEGUrl);
-  }, [espEEGUrl, connectESPEEG, setDataSource]);
+    connectESPEEG(eegBridgeUrl);
+  }, [eegBridgeUrl, connectESPEEG, setDataSource, selectedDevice]);
 
   // Auto-navigate to dashboard when PhantomLink connected
   useEffect(() => {
@@ -177,18 +200,18 @@ export const WelcomeScreen = memo(function WelcomeScreen({ onConnectToDashboard,
                   <p className="text-xs text-gray-500">MC_Maze neural spiking data</p>
                 </button>
                 <button
-                  onClick={() => setDataSourceType('esp-eeg')}
+                  onClick={() => setDataSourceType('eeg-device')}
                   className={`p-3 border transition-all duration-200 text-left ${
-                    dataSourceType === 'esp-eeg'
+                    dataSourceType === 'eeg-device'
                       ? 'border-biolink bg-biolink/10 text-white'
                       : 'border-gray-600/50 bg-gray-800/50 text-gray-400 hover:border-gray-500'
                   }`}
                 >
                   <div className="flex items-center gap-2 mb-1">
-                    <div className={`w-2 h-2 rounded-full ${dataSourceType === 'esp-eeg' ? 'bg-biolink' : 'bg-gray-500'}`} />
-                    <span className="font-medium text-sm">ESP-EEG</span>
+                    <div className={`w-2 h-2 rounded-full ${dataSourceType === 'eeg-device' ? 'bg-biolink' : 'bg-gray-500'}`} />
+                    <span className="font-medium text-sm">EEG Hardware</span>
                   </div>
-                  <p className="text-xs text-gray-500">Cerelog 8-ch EEG hardware</p>
+                  <p className="text-xs text-gray-500">OpenBCI, Muse, Emotiv, etc.</p>
                 </button>
               </div>
             </div>
@@ -284,16 +307,100 @@ export const WelcomeScreen = memo(function WelcomeScreen({ onConnectToDashboard,
               </>
             )}
 
-            {/* ESP-EEG Options */}
-            {dataSourceType === 'esp-eeg' && (
+            {/* EEG Device Options */}
+            {dataSourceType === 'eeg-device' && (
               <>
+                {/* Device Selector */}
+                <div className="space-y-2">
+                  <label className="text-sm text-gray-400 block">Select Device</label>
+                  <select
+                    value={selectedDevice.id}
+                    onChange={(e) => {
+                      const device = EEG_DEVICES.find(d => d.id === e.target.value);
+                      if (device) setSelectedDevice(device);
+                    }}
+                    className="w-full bg-gray-800/80 text-white px-4 py-3 text-sm 
+                      border border-gray-600/50 focus:border-biolink focus:outline-none 
+                      focus:ring-1 focus:ring-biolink/30
+                      transition-all duration-200"
+                  >
+                    <optgroup label="OpenBCI">
+                      {EEG_DEVICES.filter(d => d.manufacturer === 'OpenBCI').map(device => (
+                        <option key={device.id} value={device.id}>
+                          {device.name} ({device.channelCount}ch, {device.defaultSamplingRate}Hz)
+                        </option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="Muse">
+                      {EEG_DEVICES.filter(d => d.manufacturer === 'Muse').map(device => (
+                        <option key={device.id} value={device.id}>
+                          {device.name} ({device.channelCount}ch, {device.defaultSamplingRate}Hz)
+                        </option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="Emotiv">
+                      {EEG_DEVICES.filter(d => d.manufacturer === 'Emotiv').map(device => (
+                        <option key={device.id} value={device.id}>
+                          {device.name} ({device.channelCount}ch, {device.defaultSamplingRate}Hz)
+                        </option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="NeuroSky">
+                      {EEG_DEVICES.filter(d => d.manufacturer === 'NeuroSky').map(device => (
+                        <option key={device.id} value={device.id}>
+                          {device.name} ({device.channelCount}ch, {device.defaultSamplingRate}Hz)
+                        </option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="Other">
+                      {EEG_DEVICES.filter(d => !['OpenBCI', 'Muse', 'Emotiv', 'NeuroSky'].includes(d.manufacturer)).map(device => (
+                        <option key={device.id} value={device.id}>
+                          {device.name} ({device.channelCount}ch, {device.defaultSamplingRate}Hz)
+                        </option>
+                      ))}
+                    </optgroup>
+                  </select>
+                </div>
+
+                {/* Device Info */}
+                <div className="p-3 bg-gray-800/50 border border-gray-700/50 text-xs space-y-1">
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Manufacturer:</span>
+                    <span className="text-gray-300">{selectedDevice.manufacturer}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Channels:</span>
+                    <span className="text-gray-300">{selectedDevice.channelCount}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Sample Rate:</span>
+                    <span className="text-gray-300">{selectedDevice.defaultSamplingRate} Hz</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Protocol:</span>
+                    <span className="text-gray-300">{selectedDevice.defaultProtocol}</span>
+                  </div>
+                  {selectedDevice.brainflowBoardId !== undefined && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Brainflow ID:</span>
+                      <span className="text-biolink">{selectedDevice.brainflowBoardId}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Impedance:</span>
+                    <span className={selectedDevice.capabilities.hasImpedanceMeasurement ? 'text-green-400' : 'text-yellow-400'}>
+                      {selectedDevice.capabilities.hasImpedanceMeasurement ? '✓ Supported' : '~ Estimated'}
+                    </span>
+                  </div>
+                </div>
+
                 {/* WebSocket Bridge URL */}
                 <div className="space-y-2">
                   <label className="text-sm text-gray-400 block">WebSocket Bridge URL</label>
                   <input
                     type="text"
-                    value={espEEGUrl}
-                    onChange={(e) => setEspEEGUrl(e.target.value)}
+                    value={eegBridgeUrl}
+                    onChange={(e) => setEegBridgeUrl(e.target.value)}
                     placeholder="ws://localhost:8765"
                     className="w-full bg-gray-800/80 text-white px-4 py-3 text-sm 
                       border border-gray-600/50 focus:border-biolink focus:outline-none 
@@ -302,7 +409,7 @@ export const WelcomeScreen = memo(function WelcomeScreen({ onConnectToDashboard,
                     disabled={isConnecting}
                   />
                   <p className="text-xs text-gray-500">
-                    Connects to a local bridge that proxies TCP data from the ESP-EEG device.{' '}
+                    Requires a local bridge to proxy device data to the browser.{' '}
                     <a
                       href="https://github.com/yelabb/PhantomLoop/blob/main/CERELOG_INTEGRATION.md"
                       target="_blank"
@@ -316,7 +423,7 @@ export const WelcomeScreen = memo(function WelcomeScreen({ onConnectToDashboard,
 
                 {/* Connect button */}
                 <button
-                  onClick={handleConnectESPEEG}
+                  onClick={handleConnectEEG}
                   disabled={isConnecting || espConnectionStatus === 'connecting'}
                   className="w-full py-4 bg-gradient-to-r from-biolink to-cyan-500 
                     text-black text-sm font-bold
@@ -328,12 +435,12 @@ export const WelcomeScreen = memo(function WelcomeScreen({ onConnectToDashboard,
                   {isConnecting || espConnectionStatus === 'connecting' ? (
                     <>
                       <Spinner size="sm" color="white" />
-                      <span>Connecting to ESP-EEG...</span>
+                      <span>Connecting to {selectedDevice.name}...</span>
                     </>
                   ) : (
                     <>
                       <span>🧠</span>
-                      <span>Connect to ESP-EEG</span>
+                      <span>Connect to {selectedDevice.name}</span>
                     </>
                   )}
                 </button>

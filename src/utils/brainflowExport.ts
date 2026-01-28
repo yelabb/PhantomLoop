@@ -1,9 +1,19 @@
 /**
  * Brainflow Export Utilities
- * Convert electrode configurations to Brainflow-compatible formats
+ * 
+ * Convert electrode configurations to Brainflow-compatible formats.
+ * Supports all major EEG hardware through device profiles.
  */
 
-import type { ElectrodeConfiguration, ElectrodeInfo } from '../types/electrodes';
+import type { ElectrodeConfiguration, ElectrodeInfo, DeviceType } from '../types/electrodes';
+import { 
+  BRAINFLOW_BOARD_IDS, 
+  getDeviceProfile, 
+  getBrainflowBoardId
+} from '../devices/deviceProfiles';
+
+// Re-export board IDs for convenience
+export { BRAINFLOW_BOARD_IDS };
 
 /**
  * Brainflow board configuration
@@ -46,6 +56,11 @@ export interface BrainflowExportData {
   montage: string;
   sampling_rate: number;
   created_at: string;
+  device_info?: {
+    device_id: string;
+    device_name: string;
+    manufacturer: string;
+  };
   metadata: {
     source: string;
     version: string;
@@ -54,18 +69,30 @@ export interface BrainflowExportData {
 }
 
 /**
+ * Get Brainflow board ID from device type
+ */
+export function getBoardIdFromDeviceType(deviceType: DeviceType): number {
+  const deviceId = deviceType === 'brainflow-generic' ? 'synthetic' : deviceType;
+  return getBrainflowBoardId(deviceId) ?? BRAINFLOW_BOARD_IDS.SYNTHETIC;
+}
+
+/**
  * Convert PhantomLoop electrode configuration to Brainflow format
  */
 export function exportToBrainflow(
   electrodeConfig: ElectrodeConfiguration,
-  boardId: number = -1, // -1 = Synthetic board
+  boardId?: number,
   deviceConfig?: Partial<BrainflowBoardConfig>
 ): BrainflowExportData {
+  // Auto-detect board ID from device type if not provided
+  const resolvedBoardId = boardId ?? getBoardIdFromDeviceType(electrodeConfig.deviceType);
+  const deviceProfile = getDeviceProfile(electrodeConfig.deviceType);
+  
   const channels: BrainflowChannelMetadata[] = electrodeConfig.layout.electrodes.map(
     (electrode) => ({
       channel_index: electrode.channelIndex,
       channel_name: electrode.label,
-      channel_type: 'EEG', // Assuming EEG for Cerelog esp-eeg
+      channel_type: 'EEG',
       units: 'µV',
       position: {
         x: electrode.position.x,
@@ -78,7 +105,7 @@ export function exportToBrainflow(
   );
 
   const boardConfig: BrainflowBoardConfig = {
-    board_id: boardId,
+    board_id: resolvedBoardId,
     timeout: 15,
     ...deviceConfig,
   };
@@ -89,6 +116,11 @@ export function exportToBrainflow(
     montage: electrodeConfig.layout.montage,
     sampling_rate: electrodeConfig.samplingRate,
     created_at: new Date(electrodeConfig.createdAt).toISOString(),
+    device_info: deviceProfile ? {
+      device_id: deviceProfile.id,
+      device_name: deviceProfile.name,
+      manufacturer: deviceProfile.manufacturer,
+    } : undefined,
     metadata: {
       source: 'PhantomLoop Electrode Placement',
       version: '1.0.0',
@@ -191,15 +223,20 @@ export function importFromBrainflow(
     quality: undefined, // Will be updated on connection
   }));
 
+  // Determine device type from imported data
+  const deviceType = brainflowData.device_info?.device_id as DeviceType ?? 'brainflow-generic';
+
   const config: ElectrodeConfiguration = {
     id: `imported-${Date.now()}`,
-    name: `Imported from Brainflow`,
-    deviceType: 'brainflow',
+    name: brainflowData.device_info?.device_name 
+      ? `Imported: ${brainflowData.device_info.device_name}`
+      : `Imported from Brainflow`,
+    deviceType,
     channelCount: electrodes.length,
     samplingRate: brainflowData.sampling_rate,
     layout: {
       name: `${brainflowData.montage} ${electrodes.length}-channel`,
-      montage: brainflowData.montage as '10-20' | '10-10' | 'custom',
+      montage: brainflowData.montage as '10-20' | '10-10' | 'custom' | 'muse' | 'emotiv',
       electrodes,
     },
     createdAt: new Date(brainflowData.created_at).getTime(),
@@ -217,49 +254,110 @@ export function importFromBrainflow(
  */
 export function generateBrainflowPythonCode(
   electrodeConfig: ElectrodeConfiguration,
-  boardId: number = 38 // 38 = Synthetic board
+  boardId?: number
 ): string {
-  const exportData = exportToBrainflow(electrodeConfig, boardId);
+  const resolvedBoardId = boardId ?? getBoardIdFromDeviceType(electrodeConfig.deviceType);
+  const exportData = exportToBrainflow(electrodeConfig, resolvedBoardId);
+  const deviceProfile = getDeviceProfile(electrodeConfig.deviceType);
+  
+  // Get board ID constant name for cleaner code
+  const boardIdName = Object.entries(BRAINFLOW_BOARD_IDS)
+    .find(([, id]) => id === resolvedBoardId)?.[0] ?? 'SYNTHETIC';
 
   return `# Brainflow Integration - Generated from PhantomLoop
 # Electrode configuration: ${electrodeConfig.name}
+# Device: ${deviceProfile?.name ?? electrodeConfig.deviceType}
+# Manufacturer: ${deviceProfile?.manufacturer ?? 'Unknown'}
 
 from brainflow import BoardShim, BrainFlowInputParams, BoardIds
+import numpy as np
 import json
 
-# Board configuration
+# ============================================================================
+# BOARD CONFIGURATION
+# ============================================================================
+
+# Board ID: ${resolvedBoardId} (${boardIdName})
+# See: https://brainflow.readthedocs.io/en/stable/SupportedBoards.html
+BOARD_ID = ${resolvedBoardId}
+
 params = BrainFlowInputParams()
-${exportData.board_config.serial_port ? `params.serial_port = "${exportData.board_config.serial_port}"` : ''}
-${exportData.board_config.ip_address ? `params.ip_address = "${exportData.board_config.ip_address}"` : ''}
-${exportData.board_config.ip_port ? `params.ip_port = ${exportData.board_config.ip_port}` : ''}
+${exportData.board_config.serial_port ? `params.serial_port = "${exportData.board_config.serial_port}"  # Serial port` : '# params.serial_port = "COM3"  # Uncomment for serial connection'}
+${exportData.board_config.mac_address ? `params.mac_address = "${exportData.board_config.mac_address}"  # Bluetooth MAC` : '# params.mac_address = ""  # Uncomment for Bluetooth devices'}
+${exportData.board_config.ip_address ? `params.ip_address = "${exportData.board_config.ip_address}"  # Device IP` : '# params.ip_address = ""  # Uncomment for WiFi devices'}
+${exportData.board_config.ip_port ? `params.ip_port = ${exportData.board_config.ip_port}  # Device port` : '# params.ip_port = 0  # Uncomment for WiFi devices'}
 
 # Initialize board
-board = BoardShim(${boardId}, params)
+board = BoardShim(BOARD_ID, params)
 board.prepare_session()
 
+# ============================================================================
+# CHANNEL CONFIGURATION
+# ============================================================================
+
 # Channel mapping (from PhantomLoop electrode configuration)
-channel_mapping = {
+CHANNEL_MAPPING = {
 ${exportData.channels
-  .map((ch) => `    ${ch.channel_index}: "${ch.channel_name}"  # ${ch.position ? `Position: (${ch.position.x.toFixed(2)}, ${ch.position.y.toFixed(2)}, ${ch.position.z.toFixed(2)})` : 'No position'}`)
-  .join(',\n')}
+  .map((ch) => `    ${ch.channel_index}: "${ch.channel_name}",  # ${ch.position ? `(${ch.position.x.toFixed(2)}, ${ch.position.y.toFixed(2)}, ${ch.position.z.toFixed(2)})` : 'No position'}`)
+  .join('\n')}
 }
 
-# Active channels only
-active_channels = [${exportData.channels.filter((ch) => ch.is_active).map((ch) => ch.channel_index).join(', ')}]
+# Active channels
+ACTIVE_CHANNELS = [${exportData.channels.filter((ch) => ch.is_active).map((ch) => ch.channel_index).join(', ')}]
 
 # Sampling rate: ${exportData.sampling_rate} Hz
+SAMPLING_RATE = ${exportData.sampling_rate}
+
 # Montage: ${exportData.montage}
+MONTAGE = "${exportData.montage}"
 
-# Start streaming
-board.start_stream()
-print(f"Streaming from {len(active_channels)} active channels...")
+# ============================================================================
+# DATA ACQUISITION
+# ============================================================================
 
-# Your decoding code here
-# ...
+def get_eeg_channels():
+    """Get EEG channel indices from Brainflow."""
+    return BoardShim.get_eeg_channels(BOARD_ID)
 
-# Stop and release
-board.stop_stream()
-board.release_session()`;
+def start_stream(buffer_size=45000):
+    """Start data streaming."""
+    board.start_stream(buffer_size)
+    print(f"Streaming from {len(ACTIVE_CHANNELS)} active channels at {SAMPLING_RATE} Hz...")
+
+def get_data(num_samples=250):
+    """Get recent data from board."""
+    data = board.get_current_board_data(num_samples)
+    eeg_channels = get_eeg_channels()
+    return data[eeg_channels, :]
+
+def stop_stream():
+    """Stop streaming and release session."""
+    board.stop_stream()
+    board.release_session()
+    print("Stream stopped.")
+
+# ============================================================================
+# MAIN
+# ============================================================================
+
+if __name__ == "__main__":
+    try:
+        start_stream()
+        
+        # Example: Get 1 second of data
+        import time
+        time.sleep(1)
+        data = get_data(SAMPLING_RATE)
+        
+        print(f"Got data shape: {data.shape}")
+        print(f"Channel means: {np.mean(data, axis=1)}")
+        
+        # Your decoding code here
+        # ...
+        
+    finally:
+        stop_stream()
+`;
 }
 
 /**

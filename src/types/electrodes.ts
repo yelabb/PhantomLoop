@@ -1,15 +1,46 @@
 /**
- * Electrode configuration types for Cerelog ESP-EEG integration
- * Supports electrode placement, signal quality monitoring, and Brainflow export
+ * Electrode configuration types for Universal EEG Device Support
  * 
- * IMPORTANT: Cerelog ESP-EEG uses ADS1299 chip which does NOT support impedance measurement.
- * Signal quality is estimated from signal amplitude/noise characteristics.
- * The "impedance" values shown in the UI are pseudo-impedance for user familiarity.
+ * Supports multiple EEG hardware platforms:
+ * - OpenBCI (Cyton, Ganglion, Cyton+Daisy)
+ * - NeuroSky (MindWave)
+ * - Muse (Muse 2, Muse S)
+ * - Emotiv (Insight, EPOC X)
+ * - Cerelog ESP-EEG
+ * - Any Brainflow-compatible device
+ * 
+ * Note: Some devices (like ADS1299-based boards) don't support true impedance measurement.
+ * For these devices, signal quality is estimated from amplitude characteristics.
  */
 
-export type DeviceType = 'esp-eeg' | 'brainflow' | 'phantomlink';
-export type ConnectionProtocol = 'websocket' | 'serial' | 'lsl' | 'tcp';
-export type MontageName = '10-20' | '10-10' | 'custom';
+// Device types - expanded to support all major EEG platforms
+// Note: 'esp-eeg' is kept for backward compatibility (maps to 'cerelog-esp-eeg')
+export type DeviceType = 
+  | 'openbci-cyton'
+  | 'openbci-cyton-daisy'
+  | 'openbci-ganglion'
+  | 'neurosky-mindwave'
+  | 'muse-2'
+  | 'muse-s'
+  | 'emotiv-insight'
+  | 'emotiv-epoc-x'
+  | 'cerelog-esp-eeg'
+  | 'esp-eeg'           // Legacy alias for cerelog-esp-eeg
+  | 'brainflow-generic'
+  | 'brainflow'         // Legacy alias for brainflow-generic
+  | 'phantomlink'
+  | 'synthetic'
+  | 'custom';
+
+export type ConnectionProtocol = 
+  | 'websocket'
+  | 'serial'
+  | 'lsl'
+  | 'tcp'
+  | 'bluetooth'
+  | 'ble';
+
+export type MontageName = '10-20' | '10-10' | 'custom' | 'muse' | 'emotiv';
 
 /**
  * 3D position in normalized head coordinates
