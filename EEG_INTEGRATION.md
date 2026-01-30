@@ -1,6 +1,4 @@
-# Universal EEG Device Integration
-
-This branch adds **universal EEG hardware support** to PhantomLoop, including electrode placement and signal quality monitoring for multiple EEG devices, with Brainflow integration.
+# EEG Device Integration
 
 ## 🎯 Supported Devices
 
@@ -14,10 +12,17 @@ This branch adds **universal EEG hardware support** to PhantomLoop, including el
 | **Muse** | Muse S | 4 | 256 Hz | 21 | BLE |
 | **Emotiv** | Insight | 5 | 128 Hz | 25 | BLE |
 | **Emotiv** | EPOC X | 14 | 128/256 Hz | 26 | BLE |
+| **PiEEG** | PiEEG | 8 | 250-16000 Hz | 46 | SPI (Raspberry Pi) |
+| **PiEEG** | PiEEG-16 | 16 | 250-8000 Hz | 47 | SPI (Raspberry Pi) |
+| **PiEEG** | IronBCI | 8 | 250 Hz | N/A* | BLE/WiFi |
+| **PiEEG** | IronBCI-32 | 32 | 250 Hz | N/A* | WiFi |
+| **PiEEG** | JNEEG | 8 | 250-2000 Hz | N/A* | SPI (Jetson Nano) |
+| **PiEEG** | ardEEG | 8 | 250 Hz | N/A* | Serial (Arduino) |
+| **PiEEG** | MicroBCI | 8 | 250 Hz | N/A* | BLE (STM32) |
 | **Cerelog** | ESP-EEG | 8 | 250 Hz | N/A* | WiFi (TCP) |
 | **Brainflow** | Synthetic | 8 | 250 Hz | -1 | Virtual |
 
-*Cerelog ESP-EEG requires a WebSocket bridge (included).
+*Requires WebSocket bridge (included).
 
 ## ⚠️ Browser Connectivity
 
@@ -25,8 +30,9 @@ This branch adds **universal EEG hardware support** to PhantomLoop, including el
 
 For hardware devices, you need a **WebSocket bridge** that runs locally and proxies the device data to the browser. This project includes:
 
-1. **cerelog_ws_bridge.py** - For Cerelog ESP-EEG (TCP → WebSocket)
-2. Community bridges for other devices (see Bridge Setup section)
+1. **pieeg_ws_bridge.py** - For PiEEG devices (SPI/BrainFlow → WebSocket)
+2. **cerelog_ws_bridge.py** - For Cerelog ESP-EEG (TCP → WebSocket)
+3. Community bridges for other devices (see Bridge Setup section)
 
 ### Bridge Architecture
 ```
@@ -103,6 +109,35 @@ muselsl stream
 ```bash
 # Use Emotiv's Cortex API with WebSocket bridge
 # https://emotiv.gitbook.io/cortex-api/
+```
+
+#### PiEEG (Raspberry Pi)
+```bash
+# 1. Connect PiEEG shield to Raspberry Pi GPIO
+# 2. Enable SPI: sudo raspi-config → Interface Options → SPI
+
+# Install dependencies
+pip install websockets spidev RPi.GPIO numpy
+
+# Run the bridge
+cd scripts
+python pieeg_ws_bridge.py --rate 250 --gain 24
+
+# Options:
+#   --rate      Sample rate: 250, 500, 1000, 2000, 4000, 8000, 16000
+#   --gain      PGA gain: 1, 2, 4, 6, 8, 12, 24
+#   --channels  8 or 16 (for PiEEG-16)
+#   --port      WebSocket port (default: 8766)
+#   --brainflow Use BrainFlow instead of direct SPI
+
+# Connect in PhantomLoop to ws://<raspberry-pi-ip>:8766
+```
+
+**Development Mode (no hardware):**
+```bash
+# On non-Raspberry Pi systems, the bridge auto-enables simulation mode
+# Generates synthetic alpha waves for testing
+python pieeg_ws_bridge.py
 ```
 
 #### Cerelog ESP-EEG
@@ -185,6 +220,10 @@ BRAINFLOW_BOARD_IDS.MUSE_S          // 21
 BRAINFLOW_BOARD_IDS.INSIGHT         // 25
 BRAINFLOW_BOARD_IDS.EPOC            // 26
 
+// PiEEG
+BRAINFLOW_BOARD_IDS.PIEEG           // 46
+BRAINFLOW_BOARD_IDS.PIEEG_16        // 47
+
 // Testing
 BRAINFLOW_BOARD_IDS.SYNTHETIC       // -1
 ```
@@ -260,6 +299,22 @@ stats.forEach((ch, i) => {
 - **Subscription**: Requires Emotiv account for raw data
 - **Impedance**: Supported on all models
 - **Motion**: Gyroscope + accelerometer
+
+### PiEEG
+- **ADS1299**: 24-bit resolution, programmable gain (1-24x)
+- **Sample rates**: 250 Hz to 16 kHz configurable
+- **Impedance**: Supported via ADS1299 lead-off detection
+- **Signals**: EEG, EMG, ECG all supported
+- **Raspberry Pi**: Compatible with Pi 3, 4, and 5
+- **Safety**: Battery power only (5V) - never connect to mains!
+- **BrainFlow**: Supported (board ID 46 for PiEEG, 47 for PiEEG-16)
+- **Variants**:
+  - **PiEEG-16**: 16-channel daisy-chain
+  - **IronBCI**: Wearable with BLE/WiFi and mobile SDK
+  - **IronBCI-32**: 32-channel high-density
+  - **JNEEG**: Jetson Nano for GPU-accelerated DL
+  - **ardEEG**: Arduino shield for beginners
+  - **MicroBCI**: STM32 NUCLEO-WB55 compact BLE
 
 ### Cerelog ESP-EEG
 - **ADS1299**: No impedance measurement (signal-based quality only)
