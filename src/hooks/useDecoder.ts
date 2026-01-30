@@ -5,6 +5,7 @@ import { useEffect, useRef, useCallback } from 'react';
 import { useStore } from '../store';
 import { executeDecoder, clearDecoderCache } from '../decoders/executeDecoder';
 import { clearHistory as clearTFJSHistory } from '../decoders/tfjsInference';
+import { cleanupMemory } from '../decoders/tfjsBackend';
 import { extractSpatialFeatures, createChannelMask } from '../utils/spatialFeatures';
 import type { DecoderInput, DecoderOutput } from '../types/decoders';
 
@@ -25,6 +26,7 @@ export function useDecoder() {
   const historyRef = useRef<DecoderOutput[]>([]);
   const lastProcessedSeqRef = useRef<number>(-1);
   const isProcessingRef = useRef(false);
+  const packetCountRef = useRef<number>(0);
 
   // Process packet - now supports async TFJS decoders
   const processPacket = useCallback(async () => {
@@ -70,6 +72,12 @@ export function useDecoder() {
         historyRef.current.shift();
       }
 
+      // Periodic TFJS memory cleanup to prevent memory leaks in long sessions
+      packetCountRef.current++;
+      if (packetCountRef.current % 1000 === 0) {
+        cleanupMemory();
+      }
+
       // Update store
       updateDecoderOutput(output);
       updateDecoderLatency(output.latency);
@@ -87,12 +95,14 @@ export function useDecoder() {
     processPacket();
   }, [processPacket]);
 
-  // Reset history when decoder changes
+  // Reset history and cleanup memory when decoder changes
   useEffect(() => {
     historyRef.current = [];
     lastProcessedSeqRef.current = -1;
     isProcessingRef.current = false;
+    packetCountRef.current = 0;
     clearDecoderCache();
     clearTFJSHistory();
+    cleanupMemory(); // Prevent TFJS memory leaks when switching decoders
   }, [activeDecoder?.id]);
 }
