@@ -377,7 +377,8 @@ export const SpectralPowerPanel = memo(function SpectralPowerPanel({
   
   return (
     <>
-      <div className={`flex flex-col gap-3 ${isFullscreen ? 'hidden' : ''}`}>
+      {!isFullscreen && (
+      <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
             Spectral Analysis
@@ -427,6 +428,7 @@ export const SpectralPowerPanel = memo(function SpectralPowerPanel({
           </span>
         </div>
       </div>
+      )}
       
       {/* Fullscreen */}
       <AnimatePresence>

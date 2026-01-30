@@ -448,7 +448,8 @@ export const NeuralDynamicsPanel = memo(function NeuralDynamicsPanel({
   return (
     <>
       {/* Normal view */}
-      <div className={`flex flex-col gap-2 ${isFullscreen ? 'hidden' : ''}`}>
+      {!isFullscreen && (
+      <div className="flex flex-col gap-2">
         {showControls && (
           <div className="flex items-center justify-between">
             <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
@@ -465,6 +466,7 @@ export const NeuralDynamicsPanel = memo(function NeuralDynamicsPanel({
           {statsContent}
         </div>
       </div>
+      )}
       
       {/* Fullscreen view */}
       <AnimatePresence>
