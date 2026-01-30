@@ -119,17 +119,26 @@ export const ResearchDashboard = memo(function ResearchDashboard({ onConfigureEl
   const [dragSource, setDragSource] = useState<'left' | 'right' | null>(null);
   const [dragOverSidebar, setDragOverSidebar] = useState<'left' | 'right' | null>(null);
   
-  // Persist panel orders to localStorage
+  // Persist panel orders to localStorage (debounced to prevent jank during drag)
   useEffect(() => {
-    localStorage.setItem('phantomloop-left-panels-v2', JSON.stringify(leftPanelOrder));
+    const timeout = setTimeout(() => {
+      localStorage.setItem('phantomloop-left-panels-v2', JSON.stringify(leftPanelOrder));
+    }, 500);
+    return () => clearTimeout(timeout);
   }, [leftPanelOrder]);
   
   useEffect(() => {
-    localStorage.setItem('phantomloop-right-panels-v2', JSON.stringify(rightPanelOrder));
+    const timeout = setTimeout(() => {
+      localStorage.setItem('phantomloop-right-panels-v2', JSON.stringify(rightPanelOrder));
+    }, 500);
+    return () => clearTimeout(timeout);
   }, [rightPanelOrder]);
 
   useEffect(() => {
-    localStorage.setItem('phantomloop-locked-panels', JSON.stringify([...lockedPanels]));
+    const timeout = setTimeout(() => {
+      localStorage.setItem('phantomloop-locked-panels', JSON.stringify([...lockedPanels]));
+    }, 500);
+    return () => clearTimeout(timeout);
   }, [lockedPanels]);
 
   const handleToggleLock = (panelId: PanelId) => {

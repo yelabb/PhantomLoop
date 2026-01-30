@@ -1,5 +1,5 @@
 {
-  "name": "frontend",
+  "name": "phantomloop",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -27,6 +27,7 @@
     "@tensorflow/tfjs": "^4.22.0",
     "@tensorflow/tfjs-backend-webgl": "^4.22.0",
     "@tensorflow/tfjs-backend-webgpu": "^4.22.0",
+    "@vercel/analytics": "^1.6.1",
     "buffer": "^6.0.3",
     "framer-motion": "^12.26.2",
     "msgpack-lite": "^0.1.26",

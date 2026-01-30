@@ -76,10 +76,17 @@ export function getMemoryInfo() {
 
 /**
  * Dispose all tensors and reset memory
+ * Called periodically during long streaming sessions to prevent memory leaks
  */
 export function cleanupMemory() {
+  const before = tf.memory();
   tf.disposeVariables();
-  console.log('[TFJS] Memory cleaned up');
+  // Only log if we actually freed significant memory (>1MB)
+  const after = tf.memory();
+  const freedBytes = before.numBytes - after.numBytes;
+  if (freedBytes > 1_000_000) {
+    console.log(`[TFJS] Memory cleaned up: freed ${(freedBytes / 1_000_000).toFixed(1)}MB`);
+  }
 }
 
 export { tf };
