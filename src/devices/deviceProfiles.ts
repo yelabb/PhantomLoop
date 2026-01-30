@@ -4,7 +4,7 @@
  * Comprehensive registry of EEG hardware devices with their specifications,
  * connection protocols, and Brainflow board IDs.
  * 
- * Supports: OpenBCI, NeuroSky, Muse, Emotiv, Cerelog ESP-EEG, and more.
+ * Supports: OpenBCI, NeuroSky, Muse, Emotiv, Cerelog ESP-EEG, PiEEG, and more.
  */
 
 import type { Position3D } from '../types/electrodes';
@@ -30,6 +30,7 @@ export type DeviceManufacturer =
   | 'Muse'
   | 'Emotiv'
   | 'Cerelog'
+  | 'PiEEG'
   | 'BrainProducts'
   | 'ANT Neuro'
   | 'G.Tec'
@@ -41,7 +42,7 @@ export type DeviceManufacturer =
  * ADC chip types for different devices
  */
 export type ADCChip = 
-  | 'ADS1299'     // Texas Instruments (OpenBCI, Cerelog)
+  | 'ADS1299'     // Texas Instruments (OpenBCI, Cerelog, PiEEG)
   | 'ADS1299-8'   // 8-channel variant
   | 'ADS1299-16'  // Daisy-chained 16-channel
   | 'TGAM'        // NeuroSky ThinkGear ASIC Module
@@ -161,6 +162,10 @@ export const BRAINFLOW_BOARD_IDS = {
   
   // Enophone
   ENOPHONE: 37,
+  
+  // PiEEG
+  PIEEG: 46,
+  PIEEG_16: 47,
   
   // Generic/Testing
   SYNTHETIC: -1,
@@ -543,6 +548,270 @@ export const DEVICE_PROFILES: Record<string, DeviceProfile> = {
     },
     description: '8-channel WiFi EEG with ADS1299 (requires WebSocket bridge)',
     setupUrl: 'https://github.com/your-org/cerelog-esp-eeg',
+  },
+
+  // -------------------------------------------------------------------------
+  // PiEEG Devices (Raspberry Pi BCI)
+  // -------------------------------------------------------------------------
+  'pieeg-8': {
+    id: 'pieeg-8',
+    name: 'PiEEG',
+    manufacturer: 'PiEEG',
+    model: 'PiEEG 8-Channel',
+    channelCount: 8,
+    samplingRates: [250, 500, 1000, 2000, 4000, 8000, 16000],
+    defaultSamplingRate: 250,
+    resolution: 24,
+    adcChip: 'ADS1299',
+    vref: 4.5,
+    gain: 24,
+    protocols: ['lsl', 'wifi-websocket'],
+    defaultProtocol: 'lsl',
+    brainflowBoardId: 46, // PiEEG BrainFlow board ID
+    capabilities: {
+      hasImpedanceMeasurement: true,
+      hasAccelerometer: false,
+      hasGyroscope: false,
+      hasBattery: false, // Powered by Pi battery
+      hasAuxChannels: true, // 3 free aux pins
+      supportsMarkers: true,
+      supportsBrainflow: true,
+    },
+    defaultMontage: {
+      channelCount: 8,
+      labels: ['Fp1', 'Fp2', 'C3', 'Cz', 'C4', 'P3', 'Pz', 'P4'],
+      positions: getPositions(['Fp1', 'Fp2', 'C3', 'Cz', 'C4', 'P3', 'Pz', 'P4']),
+    },
+    protocolConfig: {
+      spiInterface: '/dev/spidev0.0',
+      spiSpeed: 2000000,
+      drdyPin: 17, // BCM pin for DRDY
+      resetPin: 27, // BCM pin for reset
+      programmableGain: [1, 2, 4, 6, 8, 12, 24],
+      wsBridgePort: 8766, // pieeg_ws_bridge.py default port
+      wsBridgeScript: 'scripts/pieeg_ws_bridge.py',
+    },
+    description: 'Low-cost 8-channel Raspberry Pi EEG shield with ADS1299. Supports EEG, EMG, ECG.',
+    setupUrl: 'https://pieeg.com/pieeg/',
+  },
+
+  'pieeg-16': {
+    id: 'pieeg-16',
+    name: 'PiEEG-16',
+    manufacturer: 'PiEEG',
+    model: 'PiEEG 16-Channel',
+    channelCount: 16,
+    samplingRates: [250, 500, 1000, 2000, 4000, 8000],
+    defaultSamplingRate: 250,
+    resolution: 24,
+    adcChip: 'ADS1299-16',
+    vref: 4.5,
+    gain: 24,
+    protocols: ['lsl', 'wifi-websocket'],
+    defaultProtocol: 'lsl',
+    brainflowBoardId: 47, // PiEEG-16 BrainFlow board ID
+    capabilities: {
+      hasImpedanceMeasurement: true,
+      hasAccelerometer: false,
+      hasGyroscope: false,
+      hasBattery: false,
+      hasAuxChannels: true,
+      supportsMarkers: true,
+      supportsBrainflow: true,
+    },
+    defaultMontage: {
+      channelCount: 16,
+      labels: ['Fp1', 'Fp2', 'F7', 'F3', 'Fz', 'F4', 'F8', 'T7', 'C3', 'Cz', 'C4', 'T8', 'P3', 'Pz', 'P4', 'O1'],
+      positions: getPositions(['Fp1', 'Fp2', 'F7', 'F3', 'Fz', 'F4', 'F8', 'T7', 'C3', 'Cz', 'C4', 'T8', 'P3', 'Pz', 'P4', 'O1']),
+    },
+    protocolConfig: {
+      spiInterface: '/dev/spidev0.0',
+      spiSpeed: 2000000,
+      drdyPin: 17,
+      resetPin: 27,
+      programmableGain: [1, 2, 4, 6, 8, 12, 24],
+      daisyChained: true,
+    },
+    description: 'Dual ADS1299 16-channel Raspberry Pi EEG shield. Extended coverage for research applications.',
+    setupUrl: 'https://pieeg.com/pieeg-16/',
+  },
+
+  'pieeg-ironbci': {
+    id: 'pieeg-ironbci',
+    name: 'IronBCI',
+    manufacturer: 'PiEEG',
+    model: 'IronBCI Wearable',
+    channelCount: 8,
+    samplingRates: [250, 500],
+    defaultSamplingRate: 250,
+    resolution: 24,
+    adcChip: 'ADS1299',
+    vref: 4.5,
+    gain: 24,
+    protocols: ['ble', 'wifi-websocket'],
+    defaultProtocol: 'ble',
+    capabilities: {
+      hasImpedanceMeasurement: true,
+      hasAccelerometer: false,
+      hasGyroscope: false,
+      hasBattery: true,
+      hasAuxChannels: false,
+      supportsMarkers: false,
+      supportsBrainflow: false, // Uses custom mobile SDK
+    },
+    defaultMontage: {
+      channelCount: 8,
+      labels: ['Fp1', 'Fp2', 'F3', 'F4', 'C3', 'C4', 'P3', 'P4'],
+      positions: getPositions(['Fp1', 'Fp2', 'F3', 'F4', 'C3', 'C4', 'P3', 'P4']),
+    },
+    description: 'Wearable 8-channel BLE/WiFi BCI from PiEEG. Mobile SDK available.',
+    setupUrl: 'https://pieeg.com/ironbci/',
+  },
+
+  'pieeg-ironbci-32': {
+    id: 'pieeg-ironbci-32',
+    name: 'IronBCI-32',
+    manufacturer: 'PiEEG',
+    model: 'IronBCI 32-Channel',
+    channelCount: 32,
+    samplingRates: [250, 500],
+    defaultSamplingRate: 250,
+    resolution: 24,
+    adcChip: 'ADS1299-16', // Quad daisy-chained
+    vref: 4.5,
+    gain: 24,
+    protocols: ['wifi-websocket', 'lsl'],
+    defaultProtocol: 'wifi-websocket',
+    capabilities: {
+      hasImpedanceMeasurement: true,
+      hasAccelerometer: false,
+      hasGyroscope: false,
+      hasBattery: true,
+      hasAuxChannels: true,
+      supportsMarkers: true,
+      supportsBrainflow: false,
+    },
+    defaultMontage: {
+      channelCount: 32,
+      labels: [
+        'Fp1', 'Fp2', 'F7', 'F3', 'Fz', 'F4', 'F8', 'FC5',
+        'FC1', 'FC2', 'FC6', 'T7', 'C3', 'Cz', 'C4', 'T8',
+        'CP5', 'CP1', 'CP2', 'CP6', 'P7', 'P3', 'Pz', 'P4',
+        'P8', 'PO7', 'PO3', 'POz', 'PO4', 'PO8', 'O1', 'O2'
+      ],
+      positions: getPositions([
+        'Fp1', 'Fp2', 'F7', 'F3', 'Fz', 'F4', 'F8', 'Fz',
+        'Fz', 'Fz', 'Fz', 'T7', 'C3', 'Cz', 'C4', 'T8',
+        'Cz', 'Cz', 'Cz', 'Cz', 'P7', 'P3', 'Pz', 'P4',
+        'P8', 'Pz', 'Pz', 'Pz', 'Pz', 'Pz', 'O1', 'O2'
+      ]),
+    },
+    description: 'Open-source 32-channel EEG development kit. High-density research-grade acquisition.',
+    setupUrl: 'https://pieeg.com/ironbci-32/',
+  },
+
+  'pieeg-jneeg': {
+    id: 'pieeg-jneeg',
+    name: 'JNEEG',
+    manufacturer: 'PiEEG',
+    model: 'JNEEG Jetson Nano',
+    channelCount: 8,
+    samplingRates: [250, 500, 1000, 2000],
+    defaultSamplingRate: 250,
+    resolution: 24,
+    adcChip: 'ADS1299',
+    vref: 4.5,
+    gain: 24,
+    protocols: ['lsl', 'wifi-websocket'],
+    defaultProtocol: 'lsl',
+    capabilities: {
+      hasImpedanceMeasurement: true,
+      hasAccelerometer: false,
+      hasGyroscope: false,
+      hasBattery: false,
+      hasAuxChannels: true,
+      supportsMarkers: true,
+      supportsBrainflow: false,
+    },
+    defaultMontage: {
+      channelCount: 8,
+      labels: ['Fp1', 'Fp2', 'C3', 'Cz', 'C4', 'P3', 'Pz', 'P4'],
+      positions: getPositions(['Fp1', 'Fp2', 'C3', 'Cz', 'C4', 'P3', 'Pz', 'P4']),
+    },
+    protocolConfig: {
+      spiInterface: '/dev/spidev0.0',
+      spiSpeed: 2000000,
+      drdyPin: 17,
+      resetPin: 27,
+      gpuAcceleration: true,
+    },
+    description: 'Jetson Nano EEG shield for real-time deep learning inference. GPU-accelerated processing.',
+    setupUrl: 'https://pieeg.com/jneeg/',
+  },
+
+  'pieeg-ardeeg': {
+    id: 'pieeg-ardeeg',
+    name: 'ardEEG',
+    manufacturer: 'PiEEG',
+    model: 'ardEEG Arduino Shield',
+    channelCount: 8,
+    samplingRates: [250, 500],
+    defaultSamplingRate: 250,
+    resolution: 24,
+    adcChip: 'ADS1299',
+    vref: 4.5,
+    gain: 24,
+    protocols: ['serial'],
+    defaultProtocol: 'serial',
+    defaultBaudRate: 115200,
+    capabilities: {
+      hasImpedanceMeasurement: true,
+      hasAccelerometer: false,
+      hasGyroscope: false,
+      hasBattery: false,
+      hasAuxChannels: false,
+      supportsMarkers: false,
+      supportsBrainflow: false,
+    },
+    defaultMontage: {
+      channelCount: 8,
+      labels: ['Fp1', 'Fp2', 'C3', 'Cz', 'C4', 'P3', 'Pz', 'P4'],
+      positions: getPositions(['Fp1', 'Fp2', 'C3', 'Cz', 'C4', 'P3', 'Pz', 'P4']),
+    },
+    description: 'Arduino EEG shield with ADS1299. Beginner-friendly for BCI prototyping.',
+    setupUrl: 'https://pieeg.com/ardeeg/',
+  },
+
+  'pieeg-microbci': {
+    id: 'pieeg-microbci',
+    name: 'MicroBCI',
+    manufacturer: 'PiEEG',
+    model: 'MicroBCI STM32',
+    channelCount: 8,
+    samplingRates: [250, 500],
+    defaultSamplingRate: 250,
+    resolution: 24,
+    adcChip: 'ADS1299',
+    vref: 4.5,
+    gain: 24,
+    protocols: ['ble', 'serial'],
+    defaultProtocol: 'ble',
+    capabilities: {
+      hasImpedanceMeasurement: true,
+      hasAccelerometer: false,
+      hasGyroscope: false,
+      hasBattery: true,
+      hasAuxChannels: false,
+      supportsMarkers: false,
+      supportsBrainflow: false,
+    },
+    defaultMontage: {
+      channelCount: 8,
+      labels: ['Fp1', 'Fp2', 'C3', 'Cz', 'C4', 'P3', 'Pz', 'P4'],
+      positions: getPositions(['Fp1', 'Fp2', 'C3', 'Cz', 'C4', 'P3', 'Pz', 'P4']),
+    },
+    description: 'STM32 NUCLEO-WB55 BLE EEG shield. Ultra-compact embedded BCI.',
+    setupUrl: 'https://pieeg.com/microbci/',
   },
 
   // -------------------------------------------------------------------------

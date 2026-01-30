@@ -36,7 +36,7 @@ PhantomLoop is one component of the **Phantom Stack**, an integrated ecosystem f
 ## ✨ Key Features
 
 - **🔌 Universal Stream Architecture** – Connect to any multichannel data source (EEG, spikes, simulated)
-- **🧠 10+ Device Support** – OpenBCI, Muse, Emotiv, NeuroSky, Cerelog ESP-EEG, and more
+- **🧠 15+ Device Support** – OpenBCI, Muse, Emotiv, NeuroSky, PiEEG, Cerelog ESP-EEG, and more
 - **⚡ Real-Time Performance** – 40Hz streaming with <50ms end-to-end latency
 - **🤖 AI-Powered Decoders** – TensorFlow.js models with WebGPU/WebGL acceleration
 - **📝 Monaco Code Editor** – Write custom decoders with VS Code-quality IntelliSense
@@ -61,10 +61,40 @@ PhantomLoop supports **any multichannel time-series source** through a unified a
 | **Emotiv** | Insight | 5 | 128 Hz | BLE |
 | **Emotiv** | EPOC X | 14 | 128/256 Hz | BLE |
 | **NeuroSky** | MindWave | 1 | 512 Hz | Bluetooth |
+| **PiEEG** | PiEEG | 8 | 250-16000 Hz | SPI (Raspberry Pi) |
+| **PiEEG** | PiEEG-16 | 16 | 250-8000 Hz | SPI (Raspberry Pi) |
+| **PiEEG** | IronBCI | 8 | 250 Hz | BLE/WiFi |
+| **PiEEG** | IronBCI-32 | 32 | 250 Hz | WiFi |
+| **PiEEG** | JNEEG | 8 | 250-2000 Hz | SPI (Jetson Nano) |
+| **PiEEG** | ardEEG | 8 | 250 Hz | Serial (Arduino) |
+| **PiEEG** | MicroBCI | 8 | 250 Hz | BLE (STM32) |
 | **Cerelog** | ESP-EEG | 8 | 250 Hz | WiFi (TCP) |
 | **Brainflow** | Synthetic | 8 | 250 Hz | Virtual |
 
 > ⚠️ **Note:** Browsers cannot connect directly to TCP/Serial/BLE. Hardware devices require a WebSocket bridge (Python scripts included).
+
+### 🥧 PiEEG Integration
+
+[PiEEG](https://pieeg.com) is a low-cost, open-source EEG shield for Raspberry Pi using the ADS1299 ADC. PhantomLoop provides full support for the PiEEG device family:
+
+| Device | Channels | Use Case | Link |
+|--------|----------|----------|------|
+| **PiEEG** | 8 | Raspberry Pi 3/4/5, research & learning | [pieeg.com/pieeg](https://pieeg.com/pieeg/) |
+| **PiEEG-16** | 16 | Extended coverage, dual ADS1299 | [pieeg.com/pieeg-16](https://pieeg.com/pieeg-16/) |
+| **IronBCI** | 8 | Wearable, BLE, mobile SDK | [pieeg.com/ironbci](https://pieeg.com/ironbci/) |
+| **IronBCI-32** | 32 | High-density research | [pieeg.com/ironbci-32](https://pieeg.com/ironbci-32/) |
+| **JNEEG** | 8 | Jetson Nano, GPU-accelerated DL | [pieeg.com/jneeg](https://pieeg.com/jneeg/) |
+| **ardEEG** | 8 | Arduino shield, beginner-friendly | [pieeg.com/ardeeg](https://pieeg.com/ardeeg/) |
+| **MicroBCI** | 8 | STM32 NUCLEO-WB55, ultra-compact | [pieeg.com/microbci](https://pieeg.com/microbci/) |
+
+**Key Specs:**
+- 24-bit resolution (ADS1299)
+- Programmable gain: 1, 2, 4, 6, 8, 12, 24
+- Configurable sample rates: 250-16000 SPS
+- Supports EEG, EMG, and ECG signals
+- BrainFlow compatible (board ID: 46)
+
+⚠️ **Safety:** PiEEG must be powered by battery only (5V). Never connect to mains power!
 
 ---
 
@@ -98,7 +128,19 @@ npm run dev
 # wss://phantomlink.fly.dev
 ```
 
-**Option 2: Hardware EEG (e.g., Cerelog ESP-EEG)**
+**Option 2: PiEEG (Raspberry Pi)**
+```bash
+# 1. Connect PiEEG shield to Raspberry Pi GPIO
+# 2. Enable SPI: sudo raspi-config → Interface Options → SPI
+# 3. Run the WebSocket bridge on the Pi
+pip install websockets spidev RPi.GPIO numpy
+python scripts/pieeg_ws_bridge.py --rate 250 --gain 24
+
+# 4. In PhantomLoop, connect to ws://<raspberry-pi-ip>:8766
+# 5. Select "PiEEG" in the device selector
+```
+
+**Option 3: Cerelog ESP-EEG (WiFi)**
 ```bash
 # 1. Connect to ESP-EEG WiFi: SSID: CERELOG_EEG, Password: cerelog123
 # 2. Run the WebSocket bridge
@@ -110,7 +152,50 @@ python scripts/cerelog_ws_bridge.py
 
 ---
 
-## 🏗 Architecture
+## � WebSocket Bridges
+
+Since browsers cannot directly access hardware (SPI, Serial, BLE, TCP), PhantomLoop includes Python bridge scripts that expose devices via WebSocket:
+
+| Script | Device | Port | Mode |
+|--------|--------|------|------|
+| `pieeg_ws_bridge.py` | PiEEG (Raspberry Pi) | 8766 | SPI / BrainFlow / Simulation |
+| `cerelog_ws_bridge.py` | Cerelog ESP-EEG | 8765 | TCP-to-WebSocket |
+
+### PiEEG Bridge
+
+```bash
+# Basic usage (on Raspberry Pi)
+python scripts/pieeg_ws_bridge.py
+
+# With options
+python scripts/pieeg_ws_bridge.py \
+  --rate 500 \        # Sample rate: 250, 500, 1000, 2000, 4000, 8000, 16000
+  --gain 24 \         # PGA gain: 1, 2, 4, 6, 8, 12, 24
+  --channels 16 \     # 8 or 16 (PiEEG-16)
+  --port 8766 \       # WebSocket port
+  --brainflow         # Use BrainFlow instead of direct SPI
+
+# Development mode (no hardware - generates synthetic alpha waves)
+python scripts/pieeg_ws_bridge.py  # Auto-detects non-Pi systems
+```
+
+**WebSocket Commands:**
+```json
+{"command": "connect"}
+{"command": "disconnect"}
+{"command": "set_gain", "gain": 24}
+{"command": "set_sample_rate", "rate": 500}
+```
+
+### Cerelog Bridge
+
+```bash
+python scripts/cerelog_ws_bridge.py --esp-ip 192.168.4.1 --esp-port 1112
+```
+
+---
+
+## �🏗 Architecture
 
 PhantomLoop is a single-page React application with modular state management:
 
