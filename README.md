@@ -36,7 +36,7 @@ PhantomLoop is one component of the **Phantom Stack**, an integrated ecosystem f
 ## ✨ Key Features
 
 - **🔌 Universal Stream Architecture** – Connect to any multichannel data source (EEG, spikes, simulated)
-- **🧠 15+ Device Support** – OpenBCI, Muse, Emotiv, NeuroSky, PiEEG, Cerelog ESP-EEG, and more
+- **🧠 25+ Device Support** – OpenBCI, Muse, Emotiv, NeuroSky, PiEEG, LSL (130+ devices), and more
 - **⚡ Real-Time Performance** – 40Hz streaming with <50ms end-to-end latency
 - **🤖 AI-Powered Decoders** – TensorFlow.js models with WebGPU/WebGL acceleration
 - **📝 Monaco Code Editor** – Write custom decoders with VS Code-quality IntelliSense
@@ -69,6 +69,13 @@ PhantomLoop supports **any multichannel time-series source** through a unified a
 | **PiEEG** | ardEEG | 8 | 250 Hz | Serial (Arduino) |
 | **PiEEG** | MicroBCI | 8 | 250 Hz | BLE (STM32) |
 | **Cerelog** | ESP-EEG | 8 | 250 Hz | WiFi (TCP) |
+| **LSL** | Generic (8-64ch) | 8-64 | Variable | Lab Streaming Layer |
+| **LSL** | Brain Products | 32+ | Up to 25kHz | LSL (via Connector) |
+| **LSL** | BioSemi ActiveTwo | 32+ | Up to 16kHz | LSL |
+| **LSL** | g.tec | 16+ | Up to 38kHz | LSL (g.NEEDaccess) |
+| **LSL** | Cognionics | 20-30 | 500 Hz | LSL |
+| **LSL** | ANT Neuro | 32+ | 2048 Hz | LSL |
+| **LSL** | NIRx fNIRS | 16+ | 10 Hz | LSL |
 | **Brainflow** | Synthetic | 8 | 250 Hz | Virtual |
 
 > ⚠️ **Note:** Browsers cannot connect directly to TCP/Serial/BLE. Hardware devices require a WebSocket bridge (Python scripts included).
@@ -95,6 +102,35 @@ PhantomLoop supports **any multichannel time-series source** through a unified a
 - BrainFlow compatible (board ID: 46)
 
 ⚠️ **Safety:** PiEEG must be powered by battery only (5V). Never connect to mains power!
+
+### 🌐 Lab Streaming Layer (LSL) Integration
+
+[Lab Streaming Layer (LSL)](https://labstreaminglayer.org) is the universal protocol for streaming EEG and biosignal data in research settings. PhantomLoop supports **130+ LSL-compatible devices** through the included WebSocket bridge.
+
+**Key Features:**
+- Real-time stream discovery on local network
+- Sub-millisecond time synchronization
+- Multi-stream support (EEG, markers, motion)
+- Automatic reconnection on stream loss
+
+**LSL-Compatible Devices:**
+
+| Manufacturer | Devices | Notes |
+|--------------|---------|-------|
+| **Brain Products** | actiCHamp, LiveAmp, BrainVision | Via LSL Connector app |
+| **BioSemi** | ActiveTwo 32-256ch | Research gold standard |
+| **g.tec** | g.USBamp, g.Nautilus, g.HIamp | Via g.NEEDaccess |
+| **ANT Neuro** | eego sport, eego mylab | Mobile & lab EEG |
+| **Cognionics** | Quick-20, Quick-30, Mobile-72 | Dry electrode systems |
+| **OpenBCI** | All models | Via OpenBCI GUI LSL |
+| **Muse** | Muse 1/2/S | Via muse-lsl |
+| **Emotiv** | EPOC, Insight, EPOC Flex | Via EmotivPRO LSL |
+| **NIRx** | NIRSport, NIRScout | fNIRS devices |
+| **Tobii** | Pro Glasses, Screen-based | Eye tracking |
+| **Neurosity** | Notion, Crown | Consumer EEG |
+| **BrainAccess** | HALO, MINI, MIDI | Affordable research EEG |
+
+📚 Full device list: [labstreaminglayer.org](https://labstreaminglayer.org/#checks:certified)
 
 ---
 
@@ -140,7 +176,24 @@ python scripts/pieeg_ws_bridge.py --rate 250 --gain 24
 # 5. Select "PiEEG" in the device selector
 ```
 
-**Option 3: Cerelog ESP-EEG (WiFi)**
+**Option 3: Lab Streaming Layer (130+ Devices)**
+```bash
+# 1. Start your LSL source (OpenBCI GUI, muse-lsl, BrainVision, etc.)
+# 2. Run the LSL WebSocket bridge
+pip install websockets pylsl numpy
+python scripts/lsl_ws_bridge.py
+
+# 3. In PhantomLoop, connect to ws://localhost:8767
+# 4. Select "LSL Stream" in the device selector
+
+# Advanced: Connect to specific stream by name
+python scripts/lsl_ws_bridge.py --stream "OpenBCI_EEG"
+
+# List available LSL streams on your network
+python scripts/lsl_ws_bridge.py --list
+```
+
+**Option 4: Cerelog ESP-EEG (WiFi)**
 ```bash
 # 1. Connect to ESP-EEG WiFi: SSID: CERELOG_EEG, Password: cerelog123
 # 2. Run the WebSocket bridge
@@ -158,8 +211,55 @@ Since browsers cannot directly access hardware (SPI, Serial, BLE, TCP), PhantomL
 
 | Script | Device | Port | Mode |
 |--------|--------|------|------|
+| `lsl_ws_bridge.py` | Any LSL source (130+ devices) | 8767 | LSL Inlet → WebSocket |
 | `pieeg_ws_bridge.py` | PiEEG (Raspberry Pi) | 8766 | SPI / BrainFlow / Simulation |
 | `cerelog_ws_bridge.py` | Cerelog ESP-EEG | 8765 | TCP-to-WebSocket |
+
+### LSL Bridge
+
+The LSL bridge connects to any Lab Streaming Layer source and forwards data to the browser:
+
+```bash
+# Auto-discover and connect to first EEG stream
+python scripts/lsl_ws_bridge.py
+
+# Connect to specific stream by name
+python scripts/lsl_ws_bridge.py --stream "OpenBCI_EEG"
+
+# Connect to Muse via muse-lsl
+python scripts/lsl_ws_bridge.py --stream "Muse" --type EEG
+
+# List available streams on network
+python scripts/lsl_ws_bridge.py --list
+
+# Run with simulated data for testing (no hardware)
+python scripts/lsl_ws_bridge.py --simulate
+
+# Custom port
+python scripts/lsl_ws_bridge.py --port 8768
+```
+
+**WebSocket Commands:**
+```json
+{"command": "discover"}
+{"command": "connect", "name": "OpenBCI_EEG", "stream_type": "EEG"}
+{"command": "disconnect"}
+{"command": "ping"}
+```
+
+**Response: Stream Metadata**
+```json
+{
+  "type": "metadata",
+  "stream": {
+    "name": "OpenBCI_EEG",
+    "stream_type": "EEG",
+    "channel_count": 8,
+    "sampling_rate": 250.0,
+    "channel_labels": ["Fp1", "Fp2", "C3", "C4", "P3", "P4", "O1", "O2"]
+  }
+}
+```
 
 ### PiEEG Bridge
 

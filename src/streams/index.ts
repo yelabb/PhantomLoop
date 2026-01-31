@@ -116,6 +116,71 @@ export const streamAdapterRegistry: StreamAdapterRegistry = {
   },
   
   // -------------------------------------------------------------------------
+  // Lab Streaming Layer (LSL) - Universal Protocol
+  // Supports 130+ devices via pylsl bridge
+  // -------------------------------------------------------------------------
+  'lsl-generic-8': {
+    name: 'LSL Stream (8-Channel)',
+    description: 'Generic 8-channel LSL stream - any LSL-compatible EEG device',
+    factory: (opts) => createUniversalEEGAdapter({ deviceId: 'lsl-generic-8', ...opts }),
+    defaultUrl: 'ws://localhost:8767',
+  },
+  'lsl-generic-16': {
+    name: 'LSL Stream (16-Channel)',
+    description: 'Generic 16-channel LSL stream for research-grade EEG',
+    factory: (opts) => createUniversalEEGAdapter({ deviceId: 'lsl-generic-16', ...opts }),
+    defaultUrl: 'ws://localhost:8767',
+  },
+  'lsl-generic-32': {
+    name: 'LSL Stream (32-Channel)',
+    description: 'Generic 32-channel LSL stream for high-density EEG',
+    factory: (opts) => createUniversalEEGAdapter({ deviceId: 'lsl-generic-32', ...opts }),
+    defaultUrl: 'ws://localhost:8767',
+  },
+  'lsl-generic-64': {
+    name: 'LSL Stream (64-Channel)',
+    description: 'Generic 64-channel LSL stream for research-grade high-density EEG',
+    factory: (opts) => createUniversalEEGAdapter({ deviceId: 'lsl-generic-64', ...opts }),
+    defaultUrl: 'ws://localhost:8767',
+  },
+  'lsl-brainproducts': {
+    name: 'Brain Products (LSL)',
+    description: 'Brain Products actiCHamp/LiveAmp via LSL (up to 25kHz)',
+    factory: (opts) => createUniversalEEGAdapter({ deviceId: 'lsl-brainproducts', ...opts }),
+    defaultUrl: 'ws://localhost:8767',
+  },
+  'lsl-biosemi': {
+    name: 'BioSemi ActiveTwo (LSL)',
+    description: 'BioSemi ActiveTwo research EEG via LSL (up to 16kHz)',
+    factory: (opts) => createUniversalEEGAdapter({ deviceId: 'lsl-biosemi', ...opts }),
+    defaultUrl: 'ws://localhost:8767',
+  },
+  'lsl-gtec': {
+    name: 'g.tec (LSL)',
+    description: 'g.tec g.USBamp/g.Nautilus via g.NEEDaccess LSL',
+    factory: (opts) => createUniversalEEGAdapter({ deviceId: 'lsl-gtec', ...opts }),
+    defaultUrl: 'ws://localhost:8767',
+  },
+  'lsl-cognionics': {
+    name: 'Cognionics Quick-20/30 (LSL)',
+    description: 'Cognionics dry-electrode EEG via LSL',
+    factory: (opts) => createUniversalEEGAdapter({ deviceId: 'lsl-cognionics', ...opts }),
+    defaultUrl: 'ws://localhost:8767',
+  },
+  'lsl-antneuro': {
+    name: 'ANT Neuro eego (LSL)',
+    description: 'ANT Neuro eego sport/mylab via LSL',
+    factory: (opts) => createUniversalEEGAdapter({ deviceId: 'lsl-antneuro', ...opts }),
+    defaultUrl: 'ws://localhost:8767',
+  },
+  'lsl-nirx': {
+    name: 'NIRx fNIRS (LSL)',
+    description: 'NIRx NIRSport/NIRScout fNIRS via LSL',
+    factory: (opts) => createUniversalEEGAdapter({ deviceId: 'lsl-nirx', ...opts }),
+    defaultUrl: 'ws://localhost:8767',
+  },
+  
+  // -------------------------------------------------------------------------
   // Brainflow Generic
   // -------------------------------------------------------------------------
   'brainflow-synthetic': {
@@ -166,6 +231,11 @@ export function listAdaptersByCategory() {
     'Consumer EEG': ['neurosky-mindwave', 'muse-2', 'muse-s'],
     'Research EEG': ['emotiv-insight', 'emotiv-epoc-x'],
     'Custom Hardware': ['esp-eeg', 'cerelog-esp-eeg'],
+    'Lab Streaming Layer': [
+      'lsl-generic-8', 'lsl-generic-16', 'lsl-generic-32', 'lsl-generic-64',
+      'lsl-brainproducts', 'lsl-biosemi', 'lsl-gtec', 'lsl-cognionics', 
+      'lsl-antneuro', 'lsl-nirx'
+    ],
     'Testing': ['brainflow-synthetic'],
   };
   
