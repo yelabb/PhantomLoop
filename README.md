@@ -36,7 +36,7 @@ PhantomLoop is one component of the **Phantom Stack**, an integrated ecosystem f
 ## ✨ Key Features
 
 - **🔌 Universal Stream Architecture** – Connect to any multichannel data source (EEG, spikes, simulated)
-- **🧠 15+ Device Support** – OpenBCI, Muse, Emotiv, NeuroSky, PiEEG, Cerelog ESP-EEG, and more
+- **🧠 25+ Device Support** – OpenBCI, Muse, Emotiv, NeuroSky, PiEEG, LSL (130+ devices), and more
 - **⚡ Real-Time Performance** – 40Hz streaming with <50ms end-to-end latency
 - **🤖 AI-Powered Decoders** – TensorFlow.js models with WebGPU/WebGL acceleration
 - **📝 Monaco Code Editor** – Write custom decoders with VS Code-quality IntelliSense
@@ -69,6 +69,13 @@ PhantomLoop supports **any multichannel time-series source** through a unified a
 | **PiEEG** | ardEEG | 8 | 250 Hz | Serial (Arduino) |
 | **PiEEG** | MicroBCI | 8 | 250 Hz | BLE (STM32) |
 | **Cerelog** | ESP-EEG | 8 | 250 Hz | WiFi (TCP) |
+| **LSL** | Generic (8-64ch) | 8-64 | Variable | Lab Streaming Layer |
+| **LSL** | Brain Products | 32+ | Up to 25kHz | LSL (via Connector) |
+| **LSL** | BioSemi ActiveTwo | 32+ | Up to 16kHz | LSL |
+| **LSL** | g.tec | 16+ | Up to 38kHz | LSL (g.NEEDaccess) |
+| **LSL** | Cognionics | 20-30 | 500 Hz | LSL |
+| **LSL** | ANT Neuro | 32+ | 2048 Hz | LSL |
+| **LSL** | NIRx fNIRS | 16+ | 10 Hz | LSL |
 | **Brainflow** | Synthetic | 8 | 250 Hz | Virtual |
 
 > ⚠️ **Note:** Browsers cannot connect directly to TCP/Serial/BLE. Hardware devices require a WebSocket bridge (Python scripts included).
@@ -95,6 +102,35 @@ PhantomLoop supports **any multichannel time-series source** through a unified a
 - BrainFlow compatible (board ID: 46)
 
 ⚠️ **Safety:** PiEEG must be powered by battery only (5V). Never connect to mains power!
+
+### 🌐 Lab Streaming Layer (LSL) Integration
+
+[Lab Streaming Layer (LSL)](https://labstreaminglayer.org) is the universal protocol for streaming EEG and biosignal data in research settings. PhantomLoop supports **130+ LSL-compatible devices** through the included WebSocket bridge.
+
+**Key Features:**
+- Real-time stream discovery on local network
+- Sub-millisecond time synchronization
+- Multi-stream support (EEG, markers, motion)
+- Automatic reconnection on stream loss
+
+**LSL-Compatible Devices:**
+
+| Manufacturer | Devices | Notes |
+|--------------|---------|-------|
+| **Brain Products** | actiCHamp, LiveAmp, BrainVision | Via LSL Connector app |
+| **BioSemi** | ActiveTwo 32-256ch | Research gold standard |
+| **g.tec** | g.USBamp, g.Nautilus, g.HIamp | Via g.NEEDaccess |
+| **ANT Neuro** | eego sport, eego mylab | Mobile & lab EEG |
+| **Cognionics** | Quick-20, Quick-30, Mobile-72 | Dry electrode systems |
+| **OpenBCI** | All models | Via OpenBCI GUI LSL |
+| **Muse** | Muse 1/2/S | Via muse-lsl |
+| **Emotiv** | EPOC, Insight, EPOC Flex | Via EmotivPRO LSL |
+| **NIRx** | NIRSport, NIRScout | fNIRS devices |
+| **Tobii** | Pro Glasses, Screen-based | Eye tracking |
+| **Neurosity** | Notion, Crown | Consumer EEG |
+| **BrainAccess** | HALO, MINI, MIDI | Affordable research EEG |
+
+📚 Full device list: [labstreaminglayer.org](https://labstreaminglayer.org/#checks:certified)
 
 ---
 
@@ -140,7 +176,24 @@ python scripts/pieeg_ws_bridge.py --rate 250 --gain 24
 # 5. Select "PiEEG" in the device selector
 ```
 
-**Option 3: Cerelog ESP-EEG (WiFi)**
+**Option 3: Lab Streaming Layer (130+ Devices)**
+```bash
+# 1. Start your LSL source (OpenBCI GUI, muse-lsl, BrainVision, etc.)
+# 2. Run the LSL WebSocket bridge
+pip install websockets pylsl numpy
+python scripts/lsl_ws_bridge.py
+
+# 3. In PhantomLoop, connect to ws://localhost:8767
+# 4. Select "LSL Stream" in the device selector
+
+# Advanced: Connect to specific stream by name
+python scripts/lsl_ws_bridge.py --stream "OpenBCI_EEG"
+
+# List available LSL streams on your network
+python scripts/lsl_ws_bridge.py --list
+```
+
+**Option 4: Cerelog ESP-EEG (WiFi)**
 ```bash
 # 1. Connect to ESP-EEG WiFi: SSID: CERELOG_EEG, Password: cerelog123
 # 2. Run the WebSocket bridge
@@ -158,8 +211,56 @@ Since browsers cannot directly access hardware (SPI, Serial, BLE, TCP), PhantomL
 
 | Script | Device | Port | Mode |
 |--------|--------|------|------|
+| `lsl_ws_bridge.py` | Any LSL source (130+ devices) | 8767 | LSL Inlet → WebSocket |
 | `pieeg_ws_bridge.py` | PiEEG (Raspberry Pi) | 8766 | SPI / BrainFlow / Simulation |
+| `pieeg_ws_bridge_dsp.py` | PiEEG + Signal Hygiene | 8766 | SPI + Real-Time DSP |
 | `cerelog_ws_bridge.py` | Cerelog ESP-EEG | 8765 | TCP-to-WebSocket |
+
+### LSL Bridge
+
+The LSL bridge connects to any Lab Streaming Layer source and forwards data to the browser:
+
+```bash
+# Auto-discover and connect to first EEG stream
+python scripts/lsl_ws_bridge.py
+
+# Connect to specific stream by name
+python scripts/lsl_ws_bridge.py --stream "OpenBCI_EEG"
+
+# Connect to Muse via muse-lsl
+python scripts/lsl_ws_bridge.py --stream "Muse" --type EEG
+
+# List available streams on network
+python scripts/lsl_ws_bridge.py --list
+
+# Run with simulated data for testing (no hardware)
+python scripts/lsl_ws_bridge.py --simulate
+
+# Custom port
+python scripts/lsl_ws_bridge.py --port 8768
+```
+
+**WebSocket Commands:**
+```json
+{"command": "discover"}
+{"command": "connect", "name": "OpenBCI_EEG", "stream_type": "EEG"}
+{"command": "disconnect"}
+{"command": "ping"}
+```
+
+**Response: Stream Metadata**
+```json
+{
+  "type": "metadata",
+  "stream": {
+    "name": "OpenBCI_EEG",
+    "stream_type": "EEG",
+    "channel_count": 8,
+    "sampling_rate": 250.0,
+    "channel_labels": ["Fp1", "Fp2", "C3", "C4", "P3", "P4", "O1", "O2"]
+  }
+}
+```
 
 ### PiEEG Bridge
 
@@ -186,6 +287,89 @@ python scripts/pieeg_ws_bridge.py  # Auto-detects non-Pi systems
 {"command": "set_gain", "gain": 24}
 {"command": "set_sample_rate", "rate": 500}
 ```
+
+### PiEEG Bridge with DSP (Signal Hygiene)
+
+The DSP-enhanced bridge applies real-time digital signal processing before streaming, removing common EEG artifacts at the source:
+
+**Signal Hygiene Pipeline:**
+```
+Raw ADS1299 → DC Block → Notch (50/60 Hz) → Bandpass (0.5-45 Hz) → Artifact Reject → CAR → WebSocket
+```
+
+| Filter | Purpose | Default |
+|--------|---------|--------|
+| DC Blocker | Removes electrode drift | α=0.995 (~0.8 Hz) |
+| Notch Filter | Removes powerline + harmonics | 60 Hz (3 harmonics) |
+| Bandpass | Isolates EEG band | 0.5-45 Hz (order 4) |
+| Artifact Rejection | Blanks amplitude spikes | ±150 µV threshold |
+| CAR | Common Average Reference | Disabled by default |
+
+```bash
+# Basic usage with 60 Hz notch (Americas, Asia)
+python scripts/pieeg_ws_bridge_dsp.py --notch 60
+
+# European 50 Hz with custom bandpass
+python scripts/pieeg_ws_bridge_dsp.py --notch 50 --highpass 1.0 --lowpass 40
+
+# Full signal hygiene with artifact rejection and CAR
+python scripts/pieeg_ws_bridge_dsp.py --notch 60 --car --artifact-threshold 150
+
+# Minimal processing (DC block only)
+python scripts/pieeg_ws_bridge_dsp.py --no-notch --no-bandpass
+
+# High sample rate with adjusted filters
+python scripts/pieeg_ws_bridge_dsp.py --sample-rate 500 --notch 60 --lowpass 100
+```
+
+**All DSP Options:**
+```bash
+# Network
+--host 0.0.0.0          # WebSocket bind address
+--port 8766             # WebSocket port
+
+# Hardware
+--sample-rate 250       # 250, 500, 1000, 2000 Hz
+--gain 24               # PGA gain: 1, 2, 4, 6, 8, 12, 24
+--channels 8            # Number of channels
+
+# Notch Filter
+--notch 60              # Powerline frequency (50 or 60 Hz)
+--notch-harmonics 3     # Filter fundamental + N harmonics
+--notch-q 30            # Quality factor (higher = narrower)
+--no-notch              # Disable notch filter
+
+# Bandpass Filter
+--highpass 0.5          # High-pass cutoff (Hz)
+--lowpass 45            # Low-pass cutoff (Hz)
+--filter-order 4        # Butterworth order
+--no-bandpass           # Disable bandpass filter
+
+# DC Blocking
+--dc-alpha 0.995        # DC blocker pole (0.99-0.999)
+--no-dc-block           # Disable DC blocking
+
+# Artifact Rejection
+--artifact-threshold 150  # Threshold in µV
+--no-artifact            # Disable artifact rejection
+
+# Common Average Reference
+--car                    # Enable CAR
+--car-exclude "0,7"      # Exclude channels from CAR
+
+# Smoothing
+--smooth 0.3             # Exponential smoothing alpha (0 = disabled)
+```
+
+**Extended Packet Format:**
+
+DSP packets include artifact flags per sample:
+```
+Header: magic(2) + type(1) + samples(2) + channels(1) + timestamp(8)
+Data:   [float32 × channels + artifact_byte] × samples
+```
+- `type = 0x02` indicates DSP-processed data
+- `artifact_byte` is a bitmask of channels with blanked artifacts
 
 ### Cerelog Bridge
 
