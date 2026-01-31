@@ -213,6 +213,7 @@ Since browsers cannot directly access hardware (SPI, Serial, BLE, TCP), PhantomL
 |--------|--------|------|------|
 | `lsl_ws_bridge.py` | Any LSL source (130+ devices) | 8767 | LSL Inlet → WebSocket |
 | `pieeg_ws_bridge.py` | PiEEG (Raspberry Pi) | 8766 | SPI / BrainFlow / Simulation |
+| `pieeg_ws_bridge_dsp.py` | PiEEG + Signal Hygiene | 8766 | SPI + Real-Time DSP |
 | `cerelog_ws_bridge.py` | Cerelog ESP-EEG | 8765 | TCP-to-WebSocket |
 
 ### LSL Bridge
@@ -286,6 +287,89 @@ python scripts/pieeg_ws_bridge.py  # Auto-detects non-Pi systems
 {"command": "set_gain", "gain": 24}
 {"command": "set_sample_rate", "rate": 500}
 ```
+
+### PiEEG Bridge with DSP (Signal Hygiene)
+
+The DSP-enhanced bridge applies real-time digital signal processing before streaming, removing common EEG artifacts at the source:
+
+**Signal Hygiene Pipeline:**
+```
+Raw ADS1299 → DC Block → Notch (50/60 Hz) → Bandpass (0.5-45 Hz) → Artifact Reject → CAR → WebSocket
+```
+
+| Filter | Purpose | Default |
+|--------|---------|--------|
+| DC Blocker | Removes electrode drift | α=0.995 (~0.8 Hz) |
+| Notch Filter | Removes powerline + harmonics | 60 Hz (3 harmonics) |
+| Bandpass | Isolates EEG band | 0.5-45 Hz (order 4) |
+| Artifact Rejection | Blanks amplitude spikes | ±150 µV threshold |
+| CAR | Common Average Reference | Disabled by default |
+
+```bash
+# Basic usage with 60 Hz notch (Americas, Asia)
+python scripts/pieeg_ws_bridge_dsp.py --notch 60
+
+# European 50 Hz with custom bandpass
+python scripts/pieeg_ws_bridge_dsp.py --notch 50 --highpass 1.0 --lowpass 40
+
+# Full signal hygiene with artifact rejection and CAR
+python scripts/pieeg_ws_bridge_dsp.py --notch 60 --car --artifact-threshold 150
+
+# Minimal processing (DC block only)
+python scripts/pieeg_ws_bridge_dsp.py --no-notch --no-bandpass
+
+# High sample rate with adjusted filters
+python scripts/pieeg_ws_bridge_dsp.py --sample-rate 500 --notch 60 --lowpass 100
+```
+
+**All DSP Options:**
+```bash
+# Network
+--host 0.0.0.0          # WebSocket bind address
+--port 8766             # WebSocket port
+
+# Hardware
+--sample-rate 250       # 250, 500, 1000, 2000 Hz
+--gain 24               # PGA gain: 1, 2, 4, 6, 8, 12, 24
+--channels 8            # Number of channels
+
+# Notch Filter
+--notch 60              # Powerline frequency (50 or 60 Hz)
+--notch-harmonics 3     # Filter fundamental + N harmonics
+--notch-q 30            # Quality factor (higher = narrower)
+--no-notch              # Disable notch filter
+
+# Bandpass Filter
+--highpass 0.5          # High-pass cutoff (Hz)
+--lowpass 45            # Low-pass cutoff (Hz)
+--filter-order 4        # Butterworth order
+--no-bandpass           # Disable bandpass filter
+
+# DC Blocking
+--dc-alpha 0.995        # DC blocker pole (0.99-0.999)
+--no-dc-block           # Disable DC blocking
+
+# Artifact Rejection
+--artifact-threshold 150  # Threshold in µV
+--no-artifact            # Disable artifact rejection
+
+# Common Average Reference
+--car                    # Enable CAR
+--car-exclude "0,7"      # Exclude channels from CAR
+
+# Smoothing
+--smooth 0.3             # Exponential smoothing alpha (0 = disabled)
+```
+
+**Extended Packet Format:**
+
+DSP packets include artifact flags per sample:
+```
+Header: magic(2) + type(1) + samples(2) + channels(1) + timestamp(8)
+Data:   [float32 × channels + artifact_byte] × samples
+```
+- `type = 0x02` indicates DSP-processed data
+- `artifact_byte` is a bitmask of channels with blanked artifacts
 
 ### Cerelog Bridge
 
