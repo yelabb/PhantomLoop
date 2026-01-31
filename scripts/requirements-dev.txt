@@ -1,0 +1,24 @@
+# Bridge Script Dependencies
+# Install with: pip install -r requirements-dev.txt
+
+# Core dependencies
+websockets>=11.0
+numpy>=1.24.0
+
+# DSP (optional but recommended)
+scipy>=1.10.0
+
+# Hardware (Raspberry Pi only)
+# spidev>=3.6
+# RPi.GPIO>=0.7.1
+
+# LSL (optional)
+# pylsl>=1.16.0
+
+# BrainFlow (optional)
+# brainflow>=5.10.0
+
+# Testing
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+pytest-cov>=4.1.0
