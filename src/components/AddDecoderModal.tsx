@@ -224,18 +224,7 @@ export const AddDecoderModal = memo(function AddDecoderModal({ isOpen, onClose }
           </div>
         </div>
 
-        {/* Name */}
-        <div className={isFullScreen ? 'px-4' : ''}>
-          <label className="block text-xs text-gray-400 mb-1">Name *</label>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="My Custom Decoder"
-            className="w-full bg-gray-800/80 text-white px-3 py-2 rounded-lg text-sm border border-gray-600/50 
-              focus:border-loopback focus:outline-none focus:ring-1 focus:ring-loopback/50"
-          />
-        </div>
+        
 
         {/* Model URL */}
         {sourceType === 'url' && (
@@ -326,6 +315,19 @@ export const AddDecoderModal = memo(function AddDecoderModal({ isOpen, onClose }
             />
           </>
         )}
+
+        {/* Name */}
+        <div className={isFullScreen ? 'px-4' : ''}>
+          <label className="block text-xs text-gray-400 mb-1">Name *</label>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="My Custom Decoder"
+            className="w-full bg-gray-800/80 text-white px-3 py-2 rounded-lg text-sm border border-gray-600/50 
+              focus:border-loopback focus:outline-none focus:ring-1 focus:ring-loopback/50"
+          />
+        </div>
 
         {/* Description */}
         <div className={isFullScreen ? 'px-4' : ''}>
