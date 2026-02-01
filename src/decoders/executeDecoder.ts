@@ -1,5 +1,6 @@
 // Decoder execution wrapper
 
+import * as tf from '@tensorflow/tfjs';
 import type { DecoderInput, DecoderOutput, Decoder } from '../types/decoders';
 import { PERFORMANCE_THRESHOLDS } from '../utils/constants';
 import { tfWorker, getWorkerModelType } from './tfWorkerManager';
@@ -38,18 +39,10 @@ async function getCodeBasedModel(decoder: Decoder): Promise<any> {
   if (!codeBasedModels.has(cacheKey)) {
     console.log(`[Decoder] Creating code-based TFJS model: ${decoder.name}`);
     
-    // The code expects 'tf' to be available in scope
-    // We need to get tf from the global scope or import it
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const tf = (window as any).tf;
-    
-    if (!tf) {
-      throw new Error('TensorFlow.js not loaded. Please wait for tf to be available.');
-    }
-    
     try {
       // Create a function that has access to tf and returns the model
-      const createModel = new Function('tf', decoder.code!) as (tf: unknown) => unknown;
+      // The tf object is passed from the imported module
+      const createModel = new Function('tf', decoder.code!) as (tf: typeof import('@tensorflow/tfjs')) => unknown;
       const model = createModel(tf);
       
       // Handle async model creation
@@ -236,13 +229,6 @@ export async function executeCodeBasedTFJSDecoder(
   const startTime = performance.now();
   
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const tf = (window as any).tf;
-    if (!tf) {
-      console.error('[Decoder] TensorFlow.js not available on window.tf');
-      throw new Error('TensorFlow.js not loaded');
-    }
-    
     // Get or create the model
     const model = await getCodeBasedModel(decoder);
     
