@@ -4,7 +4,7 @@ import { memo, useState, useCallback, useEffect } from 'react';
 import { useStore } from '../store';
 import { SERVER_CONFIG } from '../utils/constants';
 import { Spinner } from './LoadingStates';
-import { useESPEEG } from '../hooks/useESPEEG';
+import { useStream } from '../hooks/useStream';
 import { listDeviceProfiles, type DeviceProfile } from '../devices/deviceProfiles';
 
 type DataSourceType = 'phantomlink' | 'eeg-device';
@@ -23,16 +23,17 @@ export const WelcomeScreen = memo(function WelcomeScreen({ onConnectToDashboard,
   const connectionError = useStore((state) => state.connectionError);
   const setDataSource = useStore((state) => state.setDataSource);
   
-  // ESP-EEG hook
-  const { 
-    connectionStatus: espConnectionStatus, 
-    connect: connectESPEEG, 
-    lastError: espLastError,
-  } = useESPEEG();
+  // Universal stream hook for all EEG devices
+  const {
+    connectionState: streamConnectionState,
+    selectAdapter,
+    connect: connectStream,
+    error: streamError,
+  } = useStream();
   
   const [dataSourceType, setDataSourceType] = useState<DataSourceType>('phantomlink');
   const [selectedDevice, setSelectedDevice] = useState<DeviceProfile>(
-    EEG_DEVICES.find(d => d.id === 'cerelog-esp-eeg') || EEG_DEVICES[0]
+    EEG_DEVICES.find(d => d.id === 'synthetic') || EEG_DEVICES[0]
   );
   const [serverUrl, setServerUrl] = useState<string>(SERVER_CONFIG.BASE_URL);
   const [eegBridgeUrl, setEegBridgeUrl] = useState<string>('ws://localhost:8765');
@@ -53,6 +54,7 @@ export const WelcomeScreen = memo(function WelcomeScreen({ onConnectToDashboard,
       'emotiv-insight': 'ws://localhost:8769',
       'emotiv-epoc-x': 'ws://localhost:8769',
       'cerelog-esp-eeg': 'ws://localhost:8765',
+      'synthetic': 'ws://localhost:8770',
     };
     setEegBridgeUrl(defaultUrls[selectedDevice.id] || 'ws://localhost:8765');
   }, [selectedDevice]);
@@ -97,8 +99,8 @@ export const WelcomeScreen = memo(function WelcomeScreen({ onConnectToDashboard,
     }
   }, [sessionInput, handleConnect]);
 
-  // Handle ESP-EEG connection
-  const handleConnectEEG = useCallback(() => {
+  // Handle EEG device connection
+  const handleConnectEEG = useCallback(async () => {
     setIsConnecting(true);
     setError(null);
     setDataSource({
@@ -106,8 +108,16 @@ export const WelcomeScreen = memo(function WelcomeScreen({ onConnectToDashboard,
       url: eegBridgeUrl,
       protocol: 'websocket',
     });
-    connectESPEEG(eegBridgeUrl);
-  }, [eegBridgeUrl, connectESPEEG, setDataSource, selectedDevice]);
+    
+    // Use universal stream adapter for all devices
+    try {
+      selectAdapter(selectedDevice.id, { bridgeUrl: eegBridgeUrl });
+      await connectStream(eegBridgeUrl);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to connect');
+      setIsConnecting(false);
+    }
+  }, [eegBridgeUrl, setDataSource, selectedDevice, selectAdapter, connectStream]);
 
   // Auto-navigate to dashboard when PhantomLink connected
   useEffect(() => {
@@ -116,13 +126,13 @@ export const WelcomeScreen = memo(function WelcomeScreen({ onConnectToDashboard,
     }
   }, [isConnected, onConnectToDashboard]);
 
-  // Auto-navigate to electrode placement when ESP-EEG connects
+  // Auto-navigate to electrode placement when EEG device connects
   useEffect(() => {
-    if (espConnectionStatus === 'connected' && onConnectToESPEEG) {
+    if (streamConnectionState === 'connected' && onConnectToESPEEG) {
       setIsConnecting(false);
       onConnectToESPEEG();
     }
-  }, [espConnectionStatus, onConnectToESPEEG]);
+  }, [streamConnectionState, onConnectToESPEEG]);
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black">
@@ -359,8 +369,15 @@ export const WelcomeScreen = memo(function WelcomeScreen({ onConnectToDashboard,
                         </option>
                       ))}
                     </optgroup>
+                    <optgroup label="Brainflow / Testing">
+                      {EEG_DEVICES.filter(d => d.manufacturer === 'Brainflow').map(device => (
+                        <option key={device.id} value={device.id}>
+                          {device.name} ({device.channelCount}ch, {device.defaultSamplingRate}Hz)
+                        </option>
+                      ))}
+                    </optgroup>
                     <optgroup label="Other">
-                      {EEG_DEVICES.filter(d => !['PiEEG', 'OpenBCI', 'Muse', 'Emotiv', 'NeuroSky'].includes(d.manufacturer)).map(device => (
+                      {EEG_DEVICES.filter(d => !['PiEEG', 'OpenBCI', 'Muse', 'Emotiv', 'NeuroSky', 'Brainflow'].includes(d.manufacturer)).map(device => (
                         <option key={device.id} value={device.id}>
                           {device.name} ({device.channelCount}ch, {device.defaultSamplingRate}Hz)
                         </option>
@@ -431,7 +448,7 @@ export const WelcomeScreen = memo(function WelcomeScreen({ onConnectToDashboard,
                 {/* Connect button */}
                 <button
                   onClick={handleConnectEEG}
-                  disabled={isConnecting || espConnectionStatus === 'connecting'}
+                  disabled={isConnecting || streamConnectionState === 'connecting'}
                   className="w-full py-4 bg-gradient-to-r from-biolink to-cyan-500 
                     text-black text-sm font-bold
                     hover:from-cyan-400 hover:to-cyan-500 
@@ -439,7 +456,7 @@ export const WelcomeScreen = memo(function WelcomeScreen({ onConnectToDashboard,
                     transition-all duration-200
                     flex items-center justify-center gap-2"
                 >
-                  {isConnecting || espConnectionStatus === 'connecting' ? (
+                  {isConnecting || streamConnectionState === 'connecting' ? (
                     <>
                       <Spinner size="sm" color="white" />
                       <span>Connecting to {selectedDevice.name}...</span>
@@ -456,10 +473,10 @@ export const WelcomeScreen = memo(function WelcomeScreen({ onConnectToDashboard,
           </div>
 
           {/* Error message */}
-          {(error || connectionError || espLastError) && (
+          {(error || connectionError || streamError) && (
             <div className="mt-4 p-3 bg-red-500/20 border border-red-500/50">
               <p className="text-red-400 text-sm text-center">
-                {error || connectionError || espLastError}
+                {error || connectionError || streamError}
               </p>
             </div>
           )}

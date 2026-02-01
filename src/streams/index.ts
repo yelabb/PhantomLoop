@@ -189,6 +189,12 @@ export const streamAdapterRegistry: StreamAdapterRegistry = {
     factory: (opts) => createUniversalEEGAdapter({ deviceId: 'synthetic', ...opts }),
     defaultUrl: 'ws://localhost:8770',
   },
+  'synthetic': {
+    name: 'Synthetic Board (Testing)',
+    description: 'Synthetic board for testing without hardware',
+    factory: (opts) => createUniversalEEGAdapter({ deviceId: 'synthetic', ...opts }),
+    defaultUrl: 'ws://localhost:8770',
+  },
 };
 
 /**

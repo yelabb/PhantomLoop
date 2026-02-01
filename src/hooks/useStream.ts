@@ -75,12 +75,9 @@ export function useStream(): UseStreamReturn {
     disconnectStream();
   }, [disconnectStream]);
 
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      disconnectStream();
-    };
-  }, [disconnectStream]);
+  // NOTE: No cleanup on unmount - the stream connection is managed by the store
+  // and should persist across component navigation. Call disconnect() explicitly
+  // when you want to end the session.
 
   return {
     config: activeStreamConfig,
