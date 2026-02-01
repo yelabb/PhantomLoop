@@ -8,8 +8,12 @@ import { tfWorker, getWorkerModelType } from './tfWorkerManager';
 const spikeHistory: number[][] = [];
 const MAX_HISTORY = 10;
 
-// Cache compiled decoder functions to avoid recompiling on every call
+// Cache compiled decoder functions for JavaScript decoders
 const compiledDecoders = new Map<string, (input: DecoderInput) => { x: number; y: number; vx?: number; vy?: number; confidence?: number }>();
+
+// Cache for code-based TFJS models (created from AI-generated code)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const codeBasedModels = new Map<string, any>();
 
 function getCompiledDecoder(decoder: Decoder): (input: DecoderInput) => { x: number; y: number; vx?: number; vy?: number; confidence?: number } {
   const cacheKey = `${decoder.id}:${decoder.code}`;
@@ -21,6 +25,69 @@ function getCompiledDecoder(decoder: Decoder): (input: DecoderInput) => { x: num
   }
   
   return compiledDecoders.get(cacheKey)!;
+}
+
+/**
+ * Get or create a TensorFlow.js model from code
+ * The code should create and return a compiled tf.LayersModel
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function getCodeBasedModel(decoder: Decoder): Promise<any> {
+  const cacheKey = `${decoder.id}:${decoder.code}`;
+  
+  if (!codeBasedModels.has(cacheKey)) {
+    console.log(`[Decoder] Creating code-based TFJS model: ${decoder.name}`);
+    
+    // The code expects 'tf' to be available in scope
+    // We need to get tf from the global scope or import it
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const tf = (window as any).tf;
+    
+    if (!tf) {
+      throw new Error('TensorFlow.js not loaded. Please wait for tf to be available.');
+    }
+    
+    try {
+      // Create a function that has access to tf and returns the model
+      const createModel = new Function('tf', decoder.code!) as (tf: unknown) => unknown;
+      const model = createModel(tf);
+      
+      // Handle async model creation
+      const resolvedModel = model instanceof Promise ? await model : model;
+      
+      codeBasedModels.set(cacheKey, resolvedModel);
+      console.log(`[Decoder] Code-based model created: ${decoder.name}`);
+    } catch (error) {
+      console.error(`[Decoder] Failed to create model from code:`, error);
+      throw error;
+    }
+  }
+  
+  return codeBasedModels.get(cacheKey);
+}
+
+/**
+ * Clear the code-based model cache
+ */
+export function clearCodeBasedModelCache(decoderId?: string) {
+  if (decoderId) {
+    for (const key of codeBasedModels.keys()) {
+      if (key.startsWith(decoderId + ':')) {
+        const model = codeBasedModels.get(key);
+        if (model?.dispose) {
+          model.dispose();
+        }
+        codeBasedModels.delete(key);
+      }
+    }
+  } else {
+    for (const model of codeBasedModels.values()) {
+      if (model?.dispose) {
+        model.dispose();
+      }
+    }
+    codeBasedModels.clear();
+  }
 }
 
 // Clear cache when decoder changes
@@ -159,15 +226,93 @@ export async function executeTFJSDecoder(
 }
 
 /**
+ * Execute a code-based TensorFlow.js decoder (AI-generated models)
+ * These models are created from user code and run on the main thread
+ */
+export async function executeCodeBasedTFJSDecoder(
+  decoder: Decoder,
+  input: DecoderInput
+): Promise<DecoderOutput> {
+  const startTime = performance.now();
+  
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const tf = (window as any).tf;
+    if (!tf) {
+      throw new Error('TensorFlow.js not loaded');
+    }
+    
+    // Get or create the model
+    const model = await getCodeBasedModel(decoder);
+    
+    if (!model || !model.predict) {
+      throw new Error('Invalid model: missing predict method');
+    }
+    
+    // Prepare input tensor
+    // Models expect shape [batch, 142] or [batch, 10, 142] for temporal
+    const inputData = [...input.spikes];
+    const inputTensor = tf.tensor2d([inputData], [1, inputData.length]);
+    
+    // Run inference
+    const outputTensor = model.predict(inputTensor);
+    const output = await outputTensor.data();
+    
+    // Clean up tensors
+    inputTensor.dispose();
+    outputTensor.dispose();
+    
+    const latency = performance.now() - startTime;
+    
+    // Scale output to velocity
+    const VELOCITY_SCALE = 50;
+    const vx = output[0] * VELOCITY_SCALE;
+    const vy = output[1] * VELOCITY_SCALE;
+    
+    // Calculate new position
+    const DT = 0.025;
+    const x = input.kinematics.x + vx * DT;
+    const y = input.kinematics.y + vy * DT;
+    
+    return {
+      x: Math.max(-100, Math.min(100, x)),
+      y: Math.max(-100, Math.min(100, y)),
+      vx,
+      vy,
+      latency,
+    };
+  } catch (error) {
+    console.error(`[Decoder] Code-based TFJS execution error in ${decoder.name}:`, error);
+    
+    return {
+      x: input.kinematics.x,
+      y: input.kinematics.y,
+      vx: input.kinematics.vx,
+      vy: input.kinematics.vy,
+      latency: performance.now() - startTime,
+    };
+  }
+}
+
+/**
  * Execute any decoder (routes to appropriate executor)
  */
 export async function executeDecoder(
   decoder: Decoder,
   input: DecoderInput
 ): Promise<DecoderOutput> {
+  // Code-based TFJS decoders (AI-generated)
+  if (decoder.type === 'tfjs' && decoder.code) {
+    return executeCodeBasedTFJSDecoder(decoder, input);
+  }
+  
+  // Built-in TFJS decoders (worker-based)
   if (decoder.type === 'tfjs') {
     return executeTFJSDecoder(decoder, input);
-  } else if (decoder.type === 'javascript' && decoder.code) {
+  }
+  
+  // JavaScript baseline decoders
+  if (decoder.type === 'javascript' && decoder.code) {
     return executeJSDecoder(decoder, input);
   }
   
