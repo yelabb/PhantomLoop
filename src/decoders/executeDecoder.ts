@@ -3,31 +3,27 @@
  * 
  * Execution paths:
  * 1. Built-in TFJS (tfjsModelType) → Web Worker inference
- * 2. Custom TFJS code → Create model once, run inference per frame
+ * 2. Custom TFJS code → Web Worker (same as built-in)
  * 3. Simple JS code → Direct execution (baselines)
  * 
- * Custom TensorFlow.js code should return a compiled model.
- * The model is cached and used for inference on subsequent calls.
+ * Custom TensorFlow.js code is executed in the Web Worker
+ * where the full tf namespace (including tf.train) is available.
  */
 
-import * as tf from '@tensorflow/tfjs';
 import type { DecoderInput, DecoderOutput, Decoder } from '../types/decoders';
 import { PERFORMANCE_THRESHOLDS } from '../utils/constants';
 import { tfWorker, getWorkerModelType } from './tfWorkerManager';
-
-// Force bundler to include tf.train namespace (used by custom code)
-void tf.train.adam;
 
 // Spike history for temporal models (LSTM, Attention)
 const spikeHistory: number[][] = [];
 const MAX_HISTORY = 10;
 
-// Cache for custom TensorFlow.js models (created from code)
-const customModels = new Map<string, tf.LayersModel>();
-
-// Cache for compiled JS functions
+// Cache for compiled JS functions (simple decoders, not TFJS)
 type JSDecoderFn = (input: DecoderInput) => { x: number; y: number; vx?: number; vy?: number; confidence?: number };
 const jsFunctions = new Map<string, JSDecoderFn>();
+
+// Track which custom TFJS models have been loaded into the worker
+const customModelsLoaded = new Set<string>();
 
 /**
  * Check if code is TensorFlow.js model creation code
@@ -36,32 +32,6 @@ function isTFJSModelCode(code: string): boolean {
   return code.includes('tf.sequential') || 
          code.includes('tf.model') || 
          code.includes('tf.layers');
-}
-
-/**
- * Create a TensorFlow.js model from custom code (cached)
- * No "failed" tracking - always tries, throws on error
- */
-async function getOrCreateCustomModel(decoder: Decoder): Promise<tf.LayersModel> {
-  if (!customModels.has(decoder.id)) {
-    console.log(`[Decoder] Creating custom model: ${decoder.name}`);
-    
-    // Execute the code to create the model
-    const createModel = new Function('tf', decoder.code!) as (tf: typeof import('@tensorflow/tfjs')) => tf.LayersModel | Promise<tf.LayersModel>;
-    const model = await Promise.resolve(createModel(tf));
-    
-    if (!model || typeof model.predict !== 'function') {
-      throw new Error('Code must return a TensorFlow.js model with predict() method');
-    }
-    
-    customModels.set(decoder.id, model);
-    console.log(`[Decoder] Model ready: ${decoder.name}`, {
-      input: model.inputs[0]?.shape,
-      output: model.outputs[0]?.shape
-    });
-  }
-  
-  return customModels.get(decoder.id)!;
 }
 
 /**
@@ -81,24 +51,25 @@ function getOrCompileJSDecoder(decoder: Decoder): JSDecoderFn {
  */
 export function clearDecoderCache(decoderId?: string) {
   if (decoderId) {
-    const model = customModels.get(decoderId);
-    if (model) {
-      model.dispose();
-    }
-    customModels.delete(decoderId);
     jsFunctions.delete(decoderId);
-  } else {
-    for (const model of customModels.values()) {
-      model.dispose();
+    // Also dispose from worker if it was a custom TFJS model
+    if (customModelsLoaded.has(decoderId)) {
+      tfWorker.disposeModel(decoderId);
+      customModelsLoaded.delete(decoderId);
     }
-    customModels.clear();
+  } else {
     jsFunctions.clear();
+    // Dispose all custom models from worker
+    for (const id of customModelsLoaded) {
+      tfWorker.disposeModel(id);
+    }
+    customModelsLoaded.clear();
   }
 }
 
 /**
- * Execute a custom TensorFlow.js model decoder
- * Same pattern as built-in: create model once, run inference per frame
+ * Execute a custom TensorFlow.js model decoder via Web Worker
+ * Same execution path as built-in TFJS models - code runs in worker
  */
 async function executeCustomTFJSDecoder(
   decoder: Decoder,
@@ -106,29 +77,26 @@ async function executeCustomTFJSDecoder(
 ): Promise<DecoderOutput> {
   const startTime = performance.now();
   
-  const model = await getOrCreateCustomModel(decoder);
+  // Create model in worker if not already loaded
+  if (!customModelsLoaded.has(decoder.id)) {
+    await tfWorker.createModelFromCode(decoder.id, decoder.code!);
+    customModelsLoaded.add(decoder.id);
+  }
   
-  // Run inference (same as built-in models)
-  const result = tf.tidy(() => {
-    const inputTensor = tf.tensor2d([input.spikes], [1, input.spikes.length]);
-    return model.predict(inputTensor) as tf.Tensor;
-  });
-  
-  const outputData = result.dataSync();
-  result.dispose();
-  
+  // Run inference via worker (same as built-in models)
+  const output = await tfWorker.infer(decoder.id, [...input.spikes]);
   const latency = performance.now() - startTime;
-  
+
   // Scale output to velocity (same as built-in)
   const VELOCITY_SCALE = 50;
-  const vx = outputData[0] * VELOCITY_SCALE;
-  const vy = outputData[1] * VELOCITY_SCALE;
-  
+  const vx = output[0] * VELOCITY_SCALE;
+  const vy = output[1] * VELOCITY_SCALE;
+
   // Calculate new position
   const DT = 0.025;
   const x = input.kinematics.x + vx * DT;
   const y = input.kinematics.y + vy * DT;
-  
+
   return {
     x: Math.max(-100, Math.min(100, x)),
     y: Math.max(-100, Math.min(100, y)),
