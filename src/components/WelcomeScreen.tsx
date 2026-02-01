@@ -324,6 +324,13 @@ export const WelcomeScreen = memo(function WelcomeScreen({ onConnectToDashboard,
                       focus:ring-1 focus:ring-biolink/30
                       transition-all duration-200"
                   >
+                    <optgroup label="PiEEG">
+                      {EEG_DEVICES.filter(d => d.manufacturer === 'PiEEG').map(device => (
+                        <option key={device.id} value={device.id}>
+                          {device.name} ({device.channelCount}ch, {device.defaultSamplingRate}Hz)
+                        </option>
+                      ))}
+                    </optgroup>
                     <optgroup label="OpenBCI">
                       {EEG_DEVICES.filter(d => d.manufacturer === 'OpenBCI').map(device => (
                         <option key={device.id} value={device.id}>
@@ -353,7 +360,7 @@ export const WelcomeScreen = memo(function WelcomeScreen({ onConnectToDashboard,
                       ))}
                     </optgroup>
                     <optgroup label="Other">
-                      {EEG_DEVICES.filter(d => !['OpenBCI', 'Muse', 'Emotiv', 'NeuroSky'].includes(d.manufacturer)).map(device => (
+                      {EEG_DEVICES.filter(d => !['PiEEG', 'OpenBCI', 'Muse', 'Emotiv', 'NeuroSky'].includes(d.manufacturer)).map(device => (
                         <option key={device.id} value={device.id}>
                           {device.name} ({device.channelCount}ch, {device.defaultSamplingRate}Hz)
                         </option>

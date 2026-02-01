@@ -100,10 +100,13 @@ export const DecoderSelector = memo(function DecoderSelector() {
 
   // Group decoders by type and source
   const builtinDecoders = availableDecoders.filter(d => 
-    d.type === 'tfjs' && (!d.source || d.source.type === 'builtin')
+    d.type === 'tfjs' && (!d.source || d.source.type === 'builtin') && !d.code
   );
   const customDecoders = availableDecoders.filter(d => 
     d.source?.type === 'url' || d.source?.type === 'local'
+  );
+  const codeDecoders = availableDecoders.filter(d => 
+    d.type === 'tfjs' && d.code
   );
   const jsDecoders = availableDecoders.filter(d => d.type === 'javascript');
 
@@ -143,6 +146,16 @@ export const DecoderSelector = memo(function DecoderSelector() {
             {customDecoders.length > 0 && (
               <optgroup label="📦 Custom Models">
                 {customDecoders.map(decoder => (
+                  <option key={decoder.id} value={decoder.id}>
+                    {decoder.name}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+
+            {codeDecoders.length > 0 && (
+              <optgroup label="✨ AI Generated">
+                {codeDecoders.map(decoder => (
                   <option key={decoder.id} value={decoder.id}>
                     {decoder.name}
                   </option>

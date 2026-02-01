@@ -20,6 +20,9 @@ function App() {
   const isConnected = useStore((state) => state.isConnected);
   const dataSource = useStore((state) => state.dataSource);
   
+  // Check if a modal is blocking navigation
+  const isModalBlocking = useStore((state) => state.isModalBlocking);
+  
   // Check ESP-EEG connection state
   const { connectionStatus: espConnectionStatus } = useESPEEG();
   
@@ -35,12 +38,18 @@ function App() {
   
   // PhantomLink disconnection handling
   useEffect(() => {
+    // Don't navigate away if a modal is open (e.g., Add Decoder modal with AI generation)
+    if (isModalBlocking()) {
+      wasConnectedRef.current = isConnected;
+      return;
+    }
+    
     if (wasConnectedRef.current && !isConnected && currentScreen === 'dashboard') {
       // Use setTimeout to avoid setState during render cycle
       setTimeout(() => setCurrentScreen('welcome'), 0);
     }
     wasConnectedRef.current = isConnected;
-  }, [isConnected, currentScreen]);
+  }, [isConnected, currentScreen, isModalBlocking]);
 
   // ESP-EEG disconnection handling
   useEffect(() => {
@@ -48,12 +57,18 @@ function App() {
     const isOnESPScreen = currentScreen === 'electrode-placement' || 
       (currentScreen === 'dashboard' && dataSource?.type === 'esp-eeg');
     
+    // Don't navigate away if a modal is open
+    if (isModalBlocking()) {
+      wasESPConnectedRef.current = isESPConnected;
+      return;
+    }
+    
     if (wasESPConnectedRef.current && !isESPConnected && isOnESPScreen) {
       // Use setTimeout to avoid setState during render cycle
       setTimeout(() => setCurrentScreen('welcome'), 0);
     }
     wasESPConnectedRef.current = isESPConnected;
-  }, [espConnectionStatus, currentScreen, dataSource?.type]);
+  }, [espConnectionStatus, currentScreen, dataSource?.type, isModalBlocking]);
 
   return (
     <div className="w-screen h-screen overflow-hidden bg-black relative">

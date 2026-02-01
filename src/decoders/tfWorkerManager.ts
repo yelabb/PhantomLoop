@@ -139,6 +139,33 @@ class TFWorkerManager {
   }
 
   /**
+   * Create a model from custom code (AI-generated or user-written)
+   */
+  async createModelFromCode(id: string, code: string): Promise<{ params: number }> {
+    if (!this.ready) await this.init();
+
+    if (this.loadedModels.has(id)) {
+      console.log(`[TFJS Worker] Model ${id} already loaded from code`);
+      return { params: 0 };
+    }
+
+    console.log(`[TFJS Worker] Creating model from code: ${id}...`);
+    const result = await this.sendMessage('createFromCode', { id, code }) as {
+      success: boolean;
+      params?: number;
+      error?: string;
+    };
+
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to create model from code');
+    }
+
+    this.loadedModels.add(id);
+    console.log(`[TFJS Worker] ✓ Model created from code (${result.params?.toLocaleString()} params)`);
+    return { params: result.params || 0 };
+  }
+
+  /**
    * Load a model from URL (pre-trained model)
    */
   async loadModelFromUrl(id: string, url: string): Promise<{ params: number }> {

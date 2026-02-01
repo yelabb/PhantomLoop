@@ -14,6 +14,9 @@ import { tfjsDecoders } from './tfjsDecoders';
 import { tfWorker, getWorkerModelType } from './tfWorkerManager';
 import type { Decoder, TFJSModelType, DecoderSource } from '../types/decoders';
 
+// Storage key for persisting custom decoders
+const CUSTOM_DECODERS_KEY = 'phantomloop-custom-decoders-v1';
+
 // All available decoders
 export const allDecoders: Decoder[] = [
   ...tfjsDecoders,    // Neural network decoders (recommended)
@@ -25,6 +28,56 @@ const decoderMap = new Map<string, Decoder>();
 for (const decoder of allDecoders) {
   decoderMap.set(decoder.id, decoder);
 }
+
+/**
+ * Load persisted custom decoders from localStorage
+ */
+function loadPersistedDecoders(): void {
+  try {
+    const stored = localStorage.getItem(CUSTOM_DECODERS_KEY);
+    if (!stored) return;
+    
+    const decoders: Decoder[] = JSON.parse(stored);
+    console.log(`[Decoder] Loading ${decoders.length} persisted custom decoder(s)`);
+    
+    for (const decoder of decoders) {
+      // Don't overwrite builtin decoders
+      if (!decoderMap.has(decoder.id)) {
+        decoderMap.set(decoder.id, decoder);
+        allDecoders.push(decoder);
+        console.log(`[Decoder] Restored: ${decoder.name}`);
+      }
+    }
+  } catch (error) {
+    console.warn('[Decoder] Failed to load persisted decoders:', error);
+    // Clear corrupted data
+    localStorage.removeItem(CUSTOM_DECODERS_KEY);
+  }
+}
+
+/**
+ * Save custom decoders to localStorage
+ */
+function persistCustomDecoders(): void {
+  try {
+    // Get all custom decoders (those with code or custom source)
+    const customDecoders = allDecoders.filter(d => 
+      d.code || d.source?.type === 'url' || d.source?.type === 'local'
+    );
+    
+    if (customDecoders.length === 0) {
+      localStorage.removeItem(CUSTOM_DECODERS_KEY);
+    } else {
+      localStorage.setItem(CUSTOM_DECODERS_KEY, JSON.stringify(customDecoders));
+      console.log(`[Decoder] Persisted ${customDecoders.length} custom decoder(s)`);
+    }
+  } catch (error) {
+    console.warn('[Decoder] Failed to persist decoders:', error);
+  }
+}
+
+// Load persisted decoders on module initialization
+loadPersistedDecoders();
 
 /**
  * Register a custom decoder at runtime
@@ -42,6 +95,34 @@ export function registerCustomDecoder(decoder: Decoder): void {
     allDecoders.push(decoder);
   }
   console.log(`[Decoder] Registered: ${decoder.name} (${decoder.source?.type || decoder.type})`);
+  
+  // Persist to localStorage
+  persistCustomDecoders();
+}
+
+/**
+ * Remove a custom decoder
+ */
+export function removeCustomDecoder(decoderId: string): boolean {
+  const decoder = decoderMap.get(decoderId);
+  if (!decoder) return false;
+  
+  // Don't allow removing builtin decoders
+  const isCustom = decoder.code || decoder.source?.type === 'url' || decoder.source?.type === 'local';
+  if (!isCustom) {
+    console.warn(`[Decoder] Cannot remove builtin decoder: ${decoderId}`);
+    return false;
+  }
+  
+  decoderMap.delete(decoderId);
+  const index = allDecoders.findIndex(d => d.id === decoderId);
+  if (index >= 0) {
+    allDecoders.splice(index, 1);
+  }
+  
+  console.log(`[Decoder] Removed: ${decoder.name}`);
+  persistCustomDecoders();
+  return true;
 }
 
 /**
@@ -168,7 +249,7 @@ export { tfWorker } from './tfWorkerManager';
 // Re-export everything
 export { baselineDecoders } from './baselines';
 export { tfjsDecoders } from './tfjsDecoders';
-export { executeDecoder, executeJSDecoder, executeTFJSDecoder } from './executeDecoder';
+export { executeDecoder, executeTFJSDecoder, clearDecoderCache } from './executeDecoder';
 export { initializeTFBackend, getBackendInfo, getMemoryInfo } from './tfjsBackend';
 export { getModel, clearModelCache, getModelInfo } from './tfjsModels';
 export { clearHistory } from './tfjsInference';
