@@ -6,7 +6,7 @@
  * - Code: Write JavaScript to build/train models with TensorFlow.js
  */
 
-import { memo, useState, useCallback } from 'react';
+import { memo, useState, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useStore } from '../store';
 import { registerCustomDecoder } from '../decoders';
@@ -19,8 +19,12 @@ interface AddDecoderModalProps {
   onClose: () => void;
 }
 
+const MODAL_ID = 'add-decoder-modal';
+
 export const AddDecoderModal = memo(function AddDecoderModal({ isOpen, onClose }: AddDecoderModalProps) {
   const registerDecoder = useStore((state) => state.registerDecoder);
+  const openModal = useStore((state) => state.openModal);
+  const closeModal = useStore((state) => state.closeModal);
   
   const [sourceType, setSourceType] = useState<'url' | 'code'>('url');
   const [name, setName] = useState('');
@@ -31,6 +35,19 @@ export const AddDecoderModal = memo(function AddDecoderModal({ isOpen, onClose }
   const [isGenerating, setIsGenerating] = useState(false);
   const [showAIPrompt, setShowAIPrompt] = useState(false);
   const [aiPrompt, setAiPrompt] = useState('');
+
+  // Register modal state with store to prevent auto-navigation during AI generation
+  useEffect(() => {
+    if (isOpen) {
+      openModal(MODAL_ID);
+    } else {
+      closeModal();
+    }
+    return () => {
+      // Cleanup on unmount
+      closeModal();
+    };
+  }, [isOpen, openModal, closeModal]);
 
   const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
@@ -122,8 +139,8 @@ export const AddDecoderModal = memo(function AddDecoderModal({ isOpen, onClose }
       if (!description.trim()) {
         setDescription(result.explanation);
       }
-      setShowAIPrompt(false);
-      setAiPrompt('');
+      // Keep the prompt visible and preserve the text for iteration
+      // User can modify and regenerate if needed
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Failed to generate code';
       setError(errorMsg);
