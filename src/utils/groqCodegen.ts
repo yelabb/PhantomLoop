@@ -84,7 +84,7 @@ function parseJsonWithRepair(content: string): CodeGenerationResponse | null {
       // Find the "code" field and fix newlines within it
       const repaired = content.replace(
         /"code"\s*:\s*"([\s\S]*?)(?<!\\)"/,
-        (match, codeContent) => {
+        (_, codeContent) => {
           const escaped = codeContent
             .replace(/\\/g, '\\\\')
             .replace(/\n/g, '\\n')
