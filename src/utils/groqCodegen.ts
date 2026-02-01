@@ -31,13 +31,18 @@ Input specifications:
 
 Code requirements:
 1. The 'tf' object (TensorFlow.js) is passed as a parameter - use it directly
-2. Must return the model (NOT compiled - we only need inference)
-3. DO NOT call model.compile() - the model is used for inference only, not training
-4. DO NOT use tf.train.adam() or any optimizer - we don't need them
-5. Use appropriate architectures: Sequential, Functional API, etc.
-6. For LSTM/RNN models, reshape input inside the model using tf.layers.reshape
+2. Must return a COMPILED model
+3. Call model.compile() with optimizer: 'adam' and loss: 'meanSquaredError'
+4. DO NOT use custom initializers - use default initialization
+5. DO NOT use kernelInitializer, biasInitializer, or any initializer config
+6. Use simple layer configs: just units, activation, inputShape
+7. Use appropriate architectures: Sequential, Functional API, etc.
+8. For LSTM/RNN models, reshape input inside the model using tf.layers.reshape
 
-CRITICAL: Never call model.compile(). Just build the layers and return the model.
+CRITICAL: 
+- Use optimizer: 'adam' as a STRING, not tf.train.adam()
+- NO custom initializers - they cause errors
+- Keep layer configs minimal
 
 IMPORTANT: Respond using this EXACT format with delimiters:
 
@@ -46,6 +51,7 @@ IMPORTANT: Respond using this EXACT format with delimiters:
 const model = tf.sequential();
 model.add(tf.layers.dense({inputShape: [142], units: 64, activation: 'relu'}));
 model.add(tf.layers.dense({units: 2}));
+model.compile({optimizer: 'adam', loss: 'meanSquaredError'});
 return model;
 ---CODE_END---
 
@@ -174,9 +180,9 @@ Model type preference: ${request.modelType || 'custom'}
 Requirements:
 - Input: 142 neural channels (or temporal sequence [10, 142])
 - Output: 2 velocity values (vx, vy)
-- Must return a compiled model
-- Use appropriate activation functions
-- Include proper initialization
+- Compile with optimizer: 'adam' (as string), loss: 'meanSquaredError'
+- Use default initialization - NO kernelInitializer or biasInitializer
+- Keep layer configs simple: just units, activation, inputShape
 
 Remember to use the ---CODE_START--- and ---CODE_END--- delimiters for the code.`;
 
