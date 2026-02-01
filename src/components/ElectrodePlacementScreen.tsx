@@ -14,7 +14,7 @@ import { downloadConfiguration, downloadBrainflowPythonCode } from '../utils/bra
 import type {
   ElectrodeConfiguration,
   MontageName,
-  DataSource,
+  DeviceType,
 } from '../types/electrodes';
 import {
   createDefaultElectrode,
@@ -31,7 +31,6 @@ export function ElectrodePlacementScreen({ onBack, onContinue }: ElectrodePlacem
     electrodeConfig,
     setElectrodeConfig,
     setImpedanceMonitoring,
-    dataSource,
     setDataSource,
     impedanceValues,
     getImpedanceQuality,
@@ -90,7 +89,7 @@ export function ElectrodePlacementScreen({ onBack, onContinue }: ElectrodePlacem
     return {
       id: `config-${Date.now()}`,
       name: `EEG ${channels}ch Configuration`,
-      deviceType: streamConfig?.sourceInfo?.deviceType || 'generic',
+      deviceType: (streamConfig?.sourceInfo?.deviceType || 'brainflow-generic') as DeviceType,
       channelCount: channels,
       samplingRate: 250,
       layout: {
@@ -153,12 +152,12 @@ export function ElectrodePlacementScreen({ onBack, onContinue }: ElectrodePlacem
                   <div><strong>Device:</strong> {streamConfig.name}</div>
                   <div><strong>Channels:</strong> {streamConfig.channelCount}</div>
                   <div><strong>Sample Rate:</strong> {streamConfig.samplingRate} Hz</div>
-                  {streamConfig.sourceInfo?.manufacturer && (
-                    <div><strong>Manufacturer:</strong> {streamConfig.sourceInfo.manufacturer}</div>
-                  )}
-                  {streamConfig.sourceInfo?.brainflowBoardId !== undefined && (
-                    <div><strong>Brainflow ID:</strong> {streamConfig.sourceInfo.brainflowBoardId}</div>
-                  )}
+                  {streamConfig.sourceInfo?.manufacturer ? (
+                    <div><strong>Manufacturer:</strong> {String(streamConfig.sourceInfo.manufacturer)}</div>
+                  ) : null}
+                  {streamConfig.sourceInfo?.brainflowBoardId !== undefined ? (
+                    <div><strong>Brainflow ID:</strong> {String(streamConfig.sourceInfo.brainflowBoardId)}</div>
+                  ) : null}
                 </div>
               )}
               
