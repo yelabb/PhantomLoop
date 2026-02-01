@@ -239,24 +239,52 @@ export async function executeCodeBasedTFJSDecoder(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const tf = (window as any).tf;
     if (!tf) {
+      console.error('[Decoder] TensorFlow.js not available on window.tf');
       throw new Error('TensorFlow.js not loaded');
     }
     
     // Get or create the model
     const model = await getCodeBasedModel(decoder);
     
-    if (!model || !model.predict) {
+    if (!model) {
+      console.error('[Decoder] Model is null/undefined');
+      throw new Error('Model creation returned null');
+    }
+    
+    if (!model.predict) {
+      console.error('[Decoder] Model missing predict method. Model type:', typeof model, 'Keys:', Object.keys(model || {}));
       throw new Error('Invalid model: missing predict method');
     }
     
     // Prepare input tensor
     // Models expect shape [batch, 142] or [batch, 10, 142] for temporal
     const inputData = [...input.spikes];
+    
+    // Log first inference for debugging
+    if (!codeBasedModels.has(`${decoder.id}:logged`)) {
+      console.log(`[Decoder] First inference for ${decoder.name}:`, {
+        inputShape: [1, inputData.length],
+        sampleInput: inputData.slice(0, 5),
+        modelInputShape: model.inputs?.[0]?.shape,
+        modelOutputShape: model.outputs?.[0]?.shape,
+      });
+      codeBasedModels.set(`${decoder.id}:logged`, true);
+    }
+    
     const inputTensor = tf.tensor2d([inputData], [1, inputData.length]);
     
     // Run inference
     const outputTensor = model.predict(inputTensor);
     const output = await outputTensor.data();
+    
+    // Log output for debugging on first call
+    if (!codeBasedModels.has(`${decoder.id}:output-logged`)) {
+      console.log(`[Decoder] First output for ${decoder.name}:`, {
+        rawOutput: Array.from(output),
+        outputLength: output.length,
+      });
+      codeBasedModels.set(`${decoder.id}:output-logged`, true);
+    }
     
     // Clean up tensors
     inputTensor.dispose();
@@ -284,11 +312,13 @@ export async function executeCodeBasedTFJSDecoder(
   } catch (error) {
     console.error(`[Decoder] Code-based TFJS execution error in ${decoder.name}:`, error);
     
+    // Return zero velocity to make it obvious something is wrong
+    // instead of passing through ground truth
     return {
-      x: input.kinematics.x,
-      y: input.kinematics.y,
-      vx: input.kinematics.vx,
-      vy: input.kinematics.vy,
+      x: 0,
+      y: 0,
+      vx: 0,
+      vy: 0,
       latency: performance.now() - startTime,
     };
   }
