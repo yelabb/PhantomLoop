@@ -20,9 +20,17 @@
 | **PiEEG** | ardEEG | 8 | 250 Hz | N/A* | Serial (Arduino) |
 | **PiEEG** | MicroBCI | 8 | 250 Hz | N/A* | BLE (STM32) |
 | **Cerelog** | ESP-EEG | 8 | 250 Hz | N/A* | WiFi (TCP) |
+| **LSL** | Generic (8-64ch) | 8-64 | Variable | -2** | Lab Streaming Layer |
+| **LSL** | Brain Products | 32+ | Up to 25kHz | N/A* | LSL |
+| **LSL** | BioSemi ActiveTwo | 32+ | Up to 16kHz | N/A* | LSL |
+| **LSL** | g.tec | 16+ | Up to 38kHz | N/A* | LSL |
+| **LSL** | Cognionics | 20-30 | 500 Hz | N/A* | LSL |
+| **LSL** | ANT Neuro | 32+ | 2048 Hz | 29 | LSL |
+| **LSL** | NIRx fNIRS | 16+ | 10 Hz | N/A* | LSL |
 | **Brainflow** | Synthetic | 8 | 250 Hz | -1 | Virtual |
 
 *Requires WebSocket bridge (included).
+**LSL streams can use Brainflow Streaming Board ID -2 for forwarding.
 
 ## ⚠️ Browser Connectivity
 
@@ -30,9 +38,9 @@
 
 For hardware devices, you need a **WebSocket bridge** that runs locally and proxies the device data to the browser. This project includes:
 
-1. **pieeg_ws_bridge.py** - For PiEEG devices (SPI/BrainFlow → WebSocket)
-2. **cerelog_ws_bridge.py** - For Cerelog ESP-EEG (TCP → WebSocket)
-3. Community bridges for other devices (see Bridge Setup section)
+1. **lsl_ws_bridge.py** - For any LSL source (130+ devices → WebSocket)
+2. **pieeg_ws_bridge.py** - For PiEEG devices (SPI/BrainFlow → WebSocket)
+3. **cerelog_ws_bridge.py** - For Cerelog ESP-EEG (TCP → WebSocket)
 
 ### Bridge Architecture
 ```
@@ -103,6 +111,40 @@ pip install muselsl
 
 # Stream via LSL, then use LSL-to-WebSocket bridge
 muselsl stream
+
+# In another terminal, run the LSL bridge
+python scripts/lsl_ws_bridge.py --stream "Muse"
+```
+
+#### Lab Streaming Layer (130+ Devices)
+```bash
+# The LSL bridge supports any LSL-compatible device:
+# Brain Products, BioSemi, g.tec, ANT Neuro, Cognionics, NIRx, etc.
+
+# Install dependencies
+pip install websockets pylsl numpy
+
+# Auto-discover and connect to first EEG stream
+python scripts/lsl_ws_bridge.py
+
+# Connect to specific stream by name
+python scripts/lsl_ws_bridge.py --stream "OpenBCI_EEG"
+
+# List available LSL streams on your network
+python scripts/lsl_ws_bridge.py --list
+
+# Run with simulated data (for testing)
+python scripts/lsl_ws_bridge.py --simulate
+
+# Connect in PhantomLoop to ws://localhost:8767
+```
+
+**WebSocket Commands:**
+```json
+{"command": "discover"}
+{"command": "connect", "name": "OpenBCI_EEG", "stream_type": "EEG"}
+{"command": "disconnect"}
+{"command": "ping"}
 ```
 
 #### Emotiv Insight/EPOC
