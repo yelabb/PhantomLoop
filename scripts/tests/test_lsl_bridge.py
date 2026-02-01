@@ -329,13 +329,13 @@ class TestBinaryPacketFormat:
         timestamp = 1234567890.123456
         
         # Pack header
-        header = struct.pack('>HBHBD', magic, packet_type, num_samples, num_channels, timestamp)
+        header = struct.pack('>HBHBd', magic, packet_type, num_samples, num_channels, timestamp)
         
         # Should be 14 bytes
         assert len(header) == 14
         
         # Unpack and verify
-        unpacked = struct.unpack('>HBHBD', header)
+        unpacked = struct.unpack('>HBHBd', header)
         assert unpacked[0] == magic
         assert unpacked[1] == packet_type
         assert unpacked[2] == num_samples
@@ -377,7 +377,7 @@ class TestBinaryPacketFormat:
         samples = [[10.0, 20.0, 30.0, 40.0], [50.0, 60.0, 70.0, 80.0]]
         
         # Pack
-        header = struct.pack('>HBHBD', magic, packet_type, num_samples, num_channels, timestamp)
+        header = struct.pack('>HBHBd', magic, packet_type, num_samples, num_channels, timestamp)
         data = b''
         for sample in samples:
             data += struct.pack(f'>{num_channels}f', *sample)
@@ -385,7 +385,7 @@ class TestBinaryPacketFormat:
         packet = header + data
         
         # Parse
-        parsed_header = struct.unpack('>HBHBD', packet[:14])
+        parsed_header = struct.unpack('>HBHBd', packet[:14])
         assert parsed_header[0] == magic
         assert parsed_header[2] == num_samples
         
@@ -521,8 +521,8 @@ class TestLSLSimulatorIntegration:
 
     def test_multiple_simulators(self):
         """Test running multiple simulators"""
-        sim1 = LSLSimulator("Stream1", 4, 250.0)
-        sim2 = LSLSimulator("Stream2", 8, 500.0)
+        sim1 = LSLSimulator(stream_name="Stream1", channel_count=4, sample_rate=250.0)
+        sim2 = LSLSimulator(stream_name="Stream2", channel_count=8, sample_rate=500.0)
         
         assert sim1.stream_info.channel_count == 4
         assert sim2.stream_info.channel_count == 8

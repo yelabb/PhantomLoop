@@ -130,6 +130,17 @@ LSL_STREAM_TYPES = {
 # ============================================================================
 
 @dataclass
+class LSLStreamInfo:
+    """Lightweight stream info for external use and testing"""
+    name: str
+    stream_type: str
+    channel_count: int
+    sampling_rate: float
+    source_id: str
+    channel_labels: Optional[List[str]] = None
+
+
+@dataclass
 class StreamMetadata:
     """Metadata about an LSL stream"""
     name: str
@@ -709,55 +720,91 @@ class LSLSimulator:
     
     def __init__(
         self,
-        name: str = "PhantomLoop_Simulated_EEG",
+        stream_name: str = "PhantomLoop_Simulated_EEG",
         stream_type: str = "EEG",
         channel_count: int = 8,
-        sampling_rate: float = 250.0,
+        sample_rate: float = 250.0,
+        name: str = None,  # Alias for backward compatibility
+        sampling_rate: float = None,  # Alias for backward compatibility
     ):
-        self.name = name
+        # Handle aliases for backward compatibility
+        self._name = stream_name if name is None else name
         self.stream_type = stream_type
         self.channel_count = channel_count
-        self.sampling_rate = sampling_rate
-        self.running = False
+        self._sampling_rate = sample_rate if sampling_rate is None else sampling_rate
+        self._is_streaming = False
         self.outlet = None
+        self._sample_buffer: List[Tuple[List[float], float]] = []
+        self._buffer_lock = threading.Lock()
+        
+        # Create stream_info for test compatibility
+        self.stream_info = LSLStreamInfo(
+            name=self._name,
+            stream_type=self.stream_type,
+            channel_count=self.channel_count,
+            sampling_rate=self._sampling_rate,
+            source_id="phantomloop-sim-001",
+        )
+    
+    @property
+    def name(self) -> str:
+        return self._name
+    
+    @property
+    def sampling_rate(self) -> float:
+        return self._sampling_rate
+    
+    @property
+    def is_streaming(self) -> bool:
+        return self._is_streaming
+    
+    @property
+    def running(self) -> bool:
+        """Alias for backward compatibility"""
+        return self._is_streaming
+    
+    @running.setter
+    def running(self, value: bool):
+        self._is_streaming = value
+    
+    def get_stream_info(self) -> LSLStreamInfo:
+        """Get stream information"""
+        return self.stream_info
     
     def start(self):
         """Start simulated LSL outlet"""
-        if not LSL_AVAILABLE:
-            logger.error("pylsl not available for simulation")
-            return
+        self._is_streaming = True
         
-        from pylsl import StreamOutlet, StreamInfo as LSLStreamInfo
-        
-        # Create stream info
-        info = LSLStreamInfo(
-            self.name,
-            self.stream_type,
-            self.channel_count,
-            self.sampling_rate,
-            'float32',
-            'phantomloop-sim-001'
-        )
-        
-        # Add channel descriptions
-        desc = info.desc()
-        channels = desc.append_child("channels")
-        for i in range(self.channel_count):
-            ch = channels.append_child("channel")
-            ch.append_child_value("label", f"Ch{i+1}")
-            ch.append_child_value("type", "EEG")
-            ch.append_child_value("unit", "µV")
-        
-        # Add acquisition info
-        acq = desc.append_child("acquisition")
-        acq.append_child_value("manufacturer", "PhantomLoop")
-        acq.append_child_value("model", "Simulated EEG")
-        
-        # Create outlet
-        self.outlet = StreamOutlet(info)
-        self.running = True
-        
-        logger.info(f"Started simulated LSL outlet: {self.name}")
+        if LSL_AVAILABLE:
+            from pylsl import StreamOutlet, StreamInfo as PyLSLStreamInfo
+            
+            # Create stream info
+            info = PyLSLStreamInfo(
+                self._name,
+                self.stream_type,
+                self.channel_count,
+                self._sampling_rate,
+                'float32',
+                'phantomloop-sim-001'
+            )
+            
+            # Add channel descriptions
+            desc = info.desc()
+            channels = desc.append_child("channels")
+            for i in range(self.channel_count):
+                ch = channels.append_child("channel")
+                ch.append_child_value("label", f"Ch{i+1}")
+                ch.append_child_value("type", "EEG")
+                ch.append_child_value("unit", "µV")
+            
+            # Add acquisition info
+            acq = desc.append_child("acquisition")
+            acq.append_child_value("manufacturer", "PhantomLoop")
+            acq.append_child_value("model", "Simulated EEG")
+            
+            # Create outlet
+            self.outlet = StreamOutlet(info)
+            logger.info(f"Started simulated LSL outlet: {self._name}")
         
         # Start streaming thread
         thread = threading.Thread(target=self._stream_loop, daemon=True)
@@ -765,10 +812,10 @@ class LSLSimulator:
     
     def _stream_loop(self):
         """Generate and push simulated EEG samples"""
-        sample_interval = 1.0 / self.sampling_rate
+        sample_interval = 1.0 / self._sampling_rate
         phase = np.zeros(self.channel_count)
         
-        while self.running and self.outlet:
+        while self._is_streaming:
             # Generate simulated EEG (alpha waves + noise)
             sample = []
             for ch in range(self.channel_count):
@@ -778,14 +825,31 @@ class LSLSimulator:
                 sample.append(float(alpha + noise))
                 phase[ch] += sample_interval
             
-            # Push sample
-            self.outlet.push_sample(sample)
+            timestamp = time.time()
+            
+            # Push to LSL outlet if available
+            if self.outlet:
+                self.outlet.push_sample(sample)
+            
+            # Also buffer for pull_sample()
+            with self._buffer_lock:
+                self._sample_buffer.append((sample, timestamp))
+                # Keep buffer reasonable
+                if len(self._sample_buffer) > 1000:
+                    self._sample_buffer = self._sample_buffer[-500:]
             
             time.sleep(sample_interval)
     
+    def pull_sample(self, timeout: float = 0.0) -> Tuple[Optional[List[float]], float]:
+        """Pull a sample from the buffer (for testing without pylsl)"""
+        with self._buffer_lock:
+            if self._sample_buffer:
+                return self._sample_buffer.pop(0)
+        return None, 0.0
+    
     def stop(self):
         """Stop the simulator"""
-        self.running = False
+        self._is_streaming = False
         self.outlet = None
 
 

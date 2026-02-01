@@ -288,7 +288,7 @@ class TestPacketFormat:
         num_channels = len(samples[0])
         
         # Header: magic (2) + num_samples (2) + num_channels (1) + timestamp (8)
-        header = struct.pack('>HHBD', 0xEEEE, num_samples, num_channels, timestamp)
+        header = struct.pack('>HHBd', 0xEEEE, num_samples, num_channels, timestamp)
         
         assert len(header) == 13
         
@@ -304,10 +304,10 @@ class TestPacketFormat:
         num_channels = 8
         timestamp = 1234567890.123
         
-        header = struct.pack('>HHBD', magic, num_samples, num_channels, timestamp)
+        header = struct.pack('>HHBd', magic, num_samples, num_channels, timestamp)
         
         # Unpack
-        unpacked = struct.unpack('>HHBD', header)
+        unpacked = struct.unpack('>HHBd', header)
         
         assert unpacked[0] == magic
         assert unpacked[1] == num_samples

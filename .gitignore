@@ -29,3 +29,8 @@ dist-ssr
 cypress/videos
 cypress/screenshots
 cypress/downloads
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
