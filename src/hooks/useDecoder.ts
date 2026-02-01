@@ -15,6 +15,7 @@ const selectActiveDecoder = (state: ReturnType<typeof useStore.getState>) => sta
 const selectElectrodeConfig = (state: ReturnType<typeof useStore.getState>) => state.electrodeConfig;
 const selectUpdateDecoderOutput = (state: ReturnType<typeof useStore.getState>) => state.updateDecoderOutput;
 const selectUpdateDecoderLatency = (state: ReturnType<typeof useStore.getState>) => state.updateDecoderLatency;
+const selectIsStreamPaused = (state: ReturnType<typeof useStore.getState>) => state.isStreamPaused;
 
 export function useDecoder() {
   const currentPacket = useStore(selectCurrentPacket);
@@ -22,6 +23,7 @@ export function useDecoder() {
   const electrodeConfig = useStore(selectElectrodeConfig);
   const updateDecoderOutput = useStore(selectUpdateDecoderOutput);
   const updateDecoderLatency = useStore(selectUpdateDecoderLatency);
+  const isStreamPaused = useStore(selectIsStreamPaused);
 
   const historyRef = useRef<DecoderOutput[]>([]);
   const lastProcessedSeqRef = useRef<number>(-1);
@@ -30,6 +32,9 @@ export function useDecoder() {
 
   // Process packet - now supports async TFJS decoders
   const processPacket = useCallback(async () => {
+    // Skip processing when stream is paused (e.g., modal open)
+    if (isStreamPaused) return;
+    
     if (!currentPacket || !activeDecoder) return;
     
     // Skip if we already processed this packet or still processing previous
@@ -88,7 +93,7 @@ export function useDecoder() {
     }
     // electrodeConfig intentionally omitted - only used for optional spatial features
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPacket, activeDecoder, updateDecoderOutput, updateDecoderLatency]);
+  }, [currentPacket, activeDecoder, isStreamPaused, updateDecoderOutput, updateDecoderLatency]);
 
   // Run decoder when packet changes
   useEffect(() => {

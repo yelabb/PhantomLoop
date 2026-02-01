@@ -187,6 +187,44 @@ async function loadModelFromUrl(id: string, url: string): Promise<{ success: boo
 }
 
 /**
+ * Create a model from custom code
+ * The code should return a TensorFlow.js model
+ */
+async function createModelFromCode(id: string, code: string): Promise<{ success: boolean; params?: number; inputShape?: number[]; error?: string }> {
+  try {
+    console.log(`[Worker] Creating model from code: ${id}`);
+    
+    // Execute the code with tf as parameter
+    // The code should return a model (compiled or not)
+    const createModel = new Function('tf', code) as (tf: typeof import('@tensorflow/tfjs')) => tf.LayersModel | Promise<tf.LayersModel>;
+    const model = await Promise.resolve(createModel(tf));
+    
+    if (!model || typeof model.predict !== 'function') {
+      throw new Error('Code must return a TensorFlow.js model with predict() method');
+    }
+    
+    // Compile if not already compiled (needed for inference)
+    // Check if model has optimizer (means it's compiled)
+    if (!model.optimizer) {
+      model.compile({
+        optimizer: tf.train.adam(0.001),
+        loss: 'meanSquaredError',
+      });
+    }
+
+    const params = model.countParams();
+    const inputShape = model.inputs[0]?.shape.slice(1).map(d => d || 0) || [];
+    models.set(id, model);
+
+    console.log(`[Worker] ✓ Created model from code: ${id} (${params.toLocaleString()} params)`);
+    return { success: true, params, inputShape };
+  } catch (error) {
+    console.error(`[Worker] Failed to create model from code:`, error);
+    return { success: false, error: String(error) };
+  }
+}
+
+/**
  * Run inference on a model
  */
 function runInference(type: string, input: number[] | number[][]): { success: boolean; output?: number[]; error?: string } {
@@ -237,6 +275,12 @@ self.onmessage = async (event: MessageEvent) => {
     case 'load': {
       const loadResult = await loadModelFromUrl(payload.id, payload.url);
       self.postMessage({ id, action: 'load', result: loadResult });
+      break;
+    }
+
+    case 'createFromCode': {
+      const codeResult = await createModelFromCode(payload.id, payload.code);
+      self.postMessage({ id, action: 'createFromCode', result: codeResult });
       break;
     }
 
