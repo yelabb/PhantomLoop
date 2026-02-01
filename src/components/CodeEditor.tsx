@@ -1,11 +1,12 @@
 /**
- * Code Editor for Custom JavaScript Decoders
+ * World-Class Code Editor
  * 
  * Features:
  * - Monaco Editor (VS Code engine)
- * - JavaScript IntelliSense
- * - Real-time syntax validation
- * - Code snippets for decoder patterns
+ * - AI-powered code generation via Groq
+ * - TensorFlow.js IntelliSense
+ * - Real-time validation
+ * - Code snippets & templates
  */
 
 import { memo, useRef, useState, useCallback } from 'react';
@@ -15,103 +16,120 @@ import type { editor, Position } from 'monaco-editor';
 interface CodeEditorProps {
   value: string;
   onChange: (value: string) => void;
+  onGenerate?: () => void;
+  isGenerating?: boolean;
 }
 
-// JavaScript decoder code snippets
-const DECODER_SNIPPETS = [
+// TensorFlow.js code snippets
+const TFJS_SNIPPETS = [
   {
-    label: 'Passthrough',
-    code: `// Passthrough - returns actual cursor position
-const { x, y, vx, vy } = input.kinematics;
-return { x, y, vx, vy };`
+    label: 'Sequential Model',
+    code: `const model = tf.sequential();
+model.add(tf.layers.dense({ 
+  units: 64, 
+  activation: 'relu', 
+  inputShape: [142] 
+}));
+model.add(tf.layers.dense({ units: 2 }));
+model.compile({ 
+  optimizer: 'adam', 
+  loss: 'meanSquaredError' 
+});
+return model;`
   },
   {
-    label: 'Velocity Predictor',
-    code: `// Velocity predictor - linear extrapolation
-const { x, y, vx, vy } = input.kinematics;
-const dt = 0.025; // 25ms at 40Hz
-
-return {
-  x: x + vx * dt,
-  y: y + vy * dt,
-  vx,
-  vy
-};`
+    label: 'LSTM Model',
+    code: `const model = tf.sequential();
+model.add(tf.layers.lstm({
+  units: 64,
+  inputShape: [10, 142],
+  returnSequences: false
+}));
+model.add(tf.layers.dense({ units: 2 }));
+model.compile({
+  optimizer: 'adam',
+  loss: 'meanSquaredError'
+});
+return model;`
   },
   {
-    label: 'Spike-Scaled',
-    code: `// Scale velocity by spike rate
-const { x, y, vx, vy } = input.kinematics;
-const spikes = input.spikes;
-const dt = 0.025;
-
-const totalSpikes = spikes.reduce((sum, s) => sum + s, 0);
-const avgRate = totalSpikes / spikes.length;
-const scale = Math.min(avgRate / 10, 2);
-
-return {
-  x: x + vx * scale * dt,
-  y: y + vy * scale * dt,
-  vx: vx * scale,
-  vy: vy * scale
-};`
+    label: 'Functional API Model',
+    code: `const input = tf.input({ shape: [142] });
+const hidden = tf.layers.dense({ units: 64, activation: 'relu' }).apply(input);
+const output = tf.layers.dense({ units: 2 }).apply(hidden);
+const model = tf.model({ inputs: input, outputs: output });
+model.compile({
+  optimizer: 'adam',
+  loss: 'meanSquaredError'
+});
+return model;`
   },
   {
-    label: 'Weighted Channels',
-    code: `// Use specific channel weights
-const { x, y, vx, vy } = input.kinematics;
-const spikes = input.spikes;
-const dt = 0.025;
-
-// Example: weight first 64 channels for X, rest for Y
-const xChannels = spikes.slice(0, 64);
-const yChannels = spikes.slice(64, 128);
-
-const xRate = xChannels.reduce((s, v) => s + v, 0) / 64;
-const yRate = yChannels.reduce((s, v) => s + v, 0) / 64;
-
-const scaleX = Math.tanh(xRate * 0.5);
-const scaleY = Math.tanh(yRate * 0.5);
-
-return {
-  x: x + vx * scaleX * dt,
-  y: y + vy * scaleY * dt,
-  vx: vx * scaleX,
-  vy: vy * scaleY,
-  confidence: Math.max(scaleX, scaleY)
-};`
+    label: 'Conv1D Model',
+    code: `const model = tf.sequential();
+model.add(tf.layers.reshape({ 
+  inputShape: [142], 
+  targetShape: [142, 1] 
+}));
+model.add(tf.layers.conv1d({
+  filters: 32,
+  kernelSize: 3,
+  activation: 'relu'
+}));
+model.add(tf.layers.flatten());
+model.add(tf.layers.dense({ units: 2 }));
+model.compile({
+  optimizer: 'adam',
+  loss: 'meanSquaredError'
+});
+return model;`
   }
 ];
 
 export const CodeEditor = memo(function CodeEditor({ 
   value, 
-  onChange 
+  onChange, 
+  onGenerate,
+  isGenerating = false 
 }: CodeEditorProps) {
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const [showSnippets, setShowSnippets] = useState(false);
-  const [syntaxError, setSyntaxError] = useState<string | null>(null);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
-  // Validate JavaScript syntax
+  // Validate TensorFlow.js code
   const validateCode = useCallback((code: string) => {
+    const errors: string[] = [];
+
     if (!code.trim()) {
-      setSyntaxError(null);
+      setValidationErrors([]);
       return;
     }
 
-    try {
-      // Try to parse as a function body
-      new Function('input', code);
-      setSyntaxError(null);
-    } catch (err) {
-      setSyntaxError(err instanceof Error ? err.message : 'Invalid JavaScript');
+    // Check for return statement
+    if (!code.includes('return')) {
+      errors.push('Code must return a compiled TensorFlow.js model');
     }
+
+    // Check for model compilation
+    if (code.includes('tf.sequential()') || code.includes('tf.model(')) {
+      if (!code.includes('.compile(')) {
+        errors.push('Model must be compiled with .compile()');
+      }
+    }
+
+    // Check for common mistakes
+    if (code.includes('model.fit(') && !code.includes('await')) {
+      errors.push('model.fit() is async - consider using await or .then()');
+    }
+
+    setValidationErrors(errors);
   }, []);
 
   // Configure Monaco Editor on mount
   const handleEditorDidMount: OnMount = useCallback((editor, monaco) => {
     editorRef.current = editor;
 
-    // Configure JavaScript settings
+    // Configure TypeScript/JavaScript settings
     monaco.languages.typescript.javascriptDefaults.setDiagnosticsOptions({
       noSemanticValidation: false,
       noSyntaxValidation: false
@@ -120,36 +138,55 @@ export const CodeEditor = memo(function CodeEditor({
     monaco.languages.typescript.javascriptDefaults.setCompilerOptions({
       target: monaco.languages.typescript.ScriptTarget.ES2020,
       allowNonTsExtensions: true,
+      moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs,
+      module: monaco.languages.typescript.ModuleKind.ESNext,
+      noEmit: true,
+      esModuleInterop: true,
       allowJs: true,
       checkJs: true
     });
 
-    // Add decoder input type definitions
-    const decoderTypes = `
-      interface DecoderInput {
-        /** 142 spike count values per channel */
-        spikes: number[];
-        /** Current cursor state */
-        kinematics: {
-          x: number;
-          y: number;
-          vx: number;
-          vy: number;
-        };
-        /** Previous decoder outputs */
-        history?: Array<{ x: number; y: number; vx?: number; vy?: number; }>;
+    // Add TensorFlow.js type definitions (simplified)
+    const tfjsTypes = `
+      declare namespace tf {
+        function sequential(): LayersModel;
+        function model(config: { inputs: any; outputs: any }): LayersModel;
+        function input(config: { shape: number[] }): any;
+        
+        namespace layers {
+          function dense(config: { units: number; activation?: string; inputShape?: number[] }): any;
+          function lstm(config: { units: number; inputShape?: number[]; returnSequences?: boolean }): any;
+          function gru(config: { units: number; inputShape?: number[]; returnSequences?: boolean }): any;
+          function bidirectional(config: { layer: any }): any;
+          function conv1d(config: { filters: number; kernelSize: number; activation?: string }): any;
+          function maxPooling1d(config: { poolSize: number }): any;
+          function globalMaxPooling1d(): any;
+          function dropout(config: { rate: number }): any;
+          function flatten(): any;
+          function reshape(config: { inputShape?: number[]; targetShape: number[] }): any;
+        }
+        
+        interface LayersModel {
+          compile(config: { optimizer: string | any; loss: string; metrics?: string[] }): void;
+          fit(x: any, y: any, config?: any): Promise<any>;
+          predict(x: any): any;
+          summary(): void;
+        }
+        
+        namespace train {
+          function adam(learningRate?: number): any;
+          function sgd(learningRate?: number): any;
+          function rmsprop(learningRate?: number): any;
+        }
       }
-      
-      /** The input object available in your decoder */
-      declare const input: DecoderInput;
     `;
 
     monaco.languages.typescript.javascriptDefaults.addExtraLib(
-      decoderTypes,
-      'decoder-input.d.ts'
+      tfjsTypes,
+      'tensorflow.d.ts'
     );
 
-    // Add code completion provider
+    // Add code completion provider for custom snippets
     monaco.languages.registerCompletionItemProvider('javascript', {
       provideCompletionItems: (model: editor.ITextModel, position: Position) => {
         const word = model.getWordUntilPosition(position);
@@ -162,24 +199,27 @@ export const CodeEditor = memo(function CodeEditor({
 
         const suggestions = [
           {
-            label: 'input.spikes',
-            kind: monaco.languages.CompletionItemKind.Property,
-            insertText: 'input.spikes',
-            documentation: 'Array of 142 spike counts per channel',
+            label: 'tfSequential',
+            kind: monaco.languages.CompletionItemKind.Snippet,
+            insertText: TFJS_SNIPPETS[0].code,
+            insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            documentation: 'Create a Sequential Model',
             range
           },
           {
-            label: 'input.kinematics',
-            kind: monaco.languages.CompletionItemKind.Property,
-            insertText: 'input.kinematics',
-            documentation: 'Current cursor position and velocity { x, y, vx, vy }',
+            label: 'tfLSTM',
+            kind: monaco.languages.CompletionItemKind.Snippet,
+            insertText: TFJS_SNIPPETS[1].code,
+            insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            documentation: 'Create an LSTM Model',
             range
           },
           {
-            label: 'input.history',
-            kind: monaco.languages.CompletionItemKind.Property,
-            insertText: 'input.history',
-            documentation: 'Array of previous decoder outputs',
+            label: 'tfFunctional',
+            kind: monaco.languages.CompletionItemKind.Snippet,
+            insertText: TFJS_SNIPPETS[2].code,
+            insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            documentation: 'Create a Functional API Model',
             range
           }
         ];
@@ -200,12 +240,10 @@ export const CodeEditor = memo(function CodeEditor({
   // Insert snippet
   const insertSnippet = useCallback((snippet: string) => {
     if (editorRef.current) {
-      // Replace entire content with snippet
-      const model = editorRef.current.getModel();
-      if (model) {
-        const fullRange = model.getFullModelRange();
+      const selection = editorRef.current.getSelection();
+      if (selection) {
         editorRef.current.executeEdits('', [{
-          range: fullRange,
+          range: selection,
           text: snippet
         }]);
       }
@@ -225,7 +263,7 @@ export const CodeEditor = memo(function CodeEditor({
       {/* Editor Toolbar */}
       <div className="flex items-center justify-between mb-2 px-4">
         <div className="flex items-center gap-2">
-          <label className="text-xs text-gray-400">JavaScript Decoder Code</label>
+          <label className="text-xs text-gray-400">TensorFlow.js Code *</label>
           <div className="flex items-center gap-1">
             <div className="w-2 h-2 rounded-full bg-green-500"></div>
             <span className="text-xs text-gray-400">Monaco Editor</span>
@@ -233,6 +271,36 @@ export const CodeEditor = memo(function CodeEditor({
         </div>
         
         <div className="flex items-center gap-2">
+          {/* AI Generate Button */}
+          {onGenerate && (
+            <button
+              type="button"
+              onClick={onGenerate}
+              disabled={isGenerating}
+              className="px-3 py-1.5 text-xs font-medium text-white bg-gradient-to-r from-purple-600 to-blue-600 
+                rounded-lg hover:from-purple-500 hover:to-blue-500 transition-all disabled:opacity-50 
+                disabled:cursor-not-allowed flex items-center gap-1.5"
+              title="Generate code with AI (Groq)"
+            >
+              {isGenerating ? (
+                <>
+                  <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                  AI Generate
+                </>
+              )}
+            </button>
+          )}
+          
           {/* Snippets Button */}
           <button
             type="button"
@@ -262,7 +330,7 @@ export const CodeEditor = memo(function CodeEditor({
         <div className="mb-2 mx-4 p-3 bg-gray-800 rounded-lg border border-gray-700 animate-fade-in">
           <div className="text-xs text-gray-400 mb-2 font-semibold">Quick Templates:</div>
           <div className="grid grid-cols-2 gap-2">
-            {DECODER_SNIPPETS.map((snippet, idx) => (
+            {TFJS_SNIPPETS.map((snippet, idx) => (
               <button
                 key={idx}
                 type="button"
@@ -315,22 +383,24 @@ export const CodeEditor = memo(function CodeEditor({
         />
       </div>
 
-      {/* Syntax Error */}
-      {syntaxError && (
-        <div className="mt-2 mx-4 p-2 bg-red-500/10 border border-red-500/30 rounded-lg">
-          <div className="text-xs text-red-400">
-            ❌ <strong>Syntax Error:</strong> {syntaxError}
-          </div>
+      {/* Validation Errors */}
+      {validationErrors.length > 0 && (
+        <div className="mt-2 mx-4 p-2 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+          <div className="text-xs text-yellow-400 font-semibold mb-1">⚠️ Warnings:</div>
+          {validationErrors.map((error, idx) => (
+            <div key={idx} className="text-xs text-yellow-300/80 ml-4">
+              • {error}
+            </div>
+          ))}
         </div>
       )}
 
       {/* Helper Info */}
       <div className="mt-2 mx-4 p-2 bg-gray-800/50 rounded-lg border border-gray-700/30">
         <div className="text-xs text-gray-400 leading-relaxed">
-          <strong className="text-loopback">💡 Tips:</strong> Use <kbd className="px-1.5 py-0.5 bg-gray-700 rounded text-xs">Ctrl+Space</kbd> for autocomplete. 
-          Access <code className="text-loopback/80 bg-gray-900 px-1 rounded">input.spikes</code> (142 channels), 
-          <code className="text-loopback/80 bg-gray-900 px-1 rounded">input.kinematics</code> (x, y, vx, vy), 
-          and <code className="text-loopback/80 bg-gray-900 px-1 rounded">input.history</code> (previous outputs).
+          <strong className="text-loopback">💡 Tips:</strong> Use <kbd className="px-1.5 py-0.5 bg-gray-700 rounded text-xs">Ctrl+Space</kbd> for autocomplete, 
+          <kbd className="px-1.5 py-0.5 bg-gray-700 rounded text-xs ml-1">Shift+Alt+F</kbd> to format. 
+          The global <code className="text-loopback/80 bg-gray-900 px-1 rounded">tf</code> object provides full TensorFlow.js API access.
         </div>
       </div>
     </div>
