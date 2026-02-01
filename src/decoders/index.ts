@@ -249,7 +249,7 @@ export { tfWorker } from './tfWorkerManager';
 // Re-export everything
 export { baselineDecoders } from './baselines';
 export { tfjsDecoders } from './tfjsDecoders';
-export { executeDecoder, executeJSDecoder, executeTFJSDecoder } from './executeDecoder';
+export { executeDecoder, executeTFJSDecoder, clearDecoderCache } from './executeDecoder';
 export { initializeTFBackend, getBackendInfo, getMemoryInfo } from './tfjsBackend';
 export { getModel, clearModelCache, getModelInfo } from './tfjsModels';
 export { clearHistory } from './tfjsInference';

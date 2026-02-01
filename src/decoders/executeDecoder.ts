@@ -1,15 +1,16 @@
 /**
  * Unified Decoder Execution
  * 
- * All decoders (built-in and custom) use the same execution path:
- * - Built-in TFJS: Web Worker inference
- * - Custom JS: Compiled function with sandboxed input
+ * Execution paths:
+ * 1. Built-in TFJS (tfjsModelType) → Web Worker inference
+ * 2. Custom TFJS code → Create model once, run inference per frame
+ * 3. Simple JS code → Direct execution (baselines)
  * 
- * Custom JavaScript decoders use the same format as baselines:
- * - Receive `input` object with { spikes, kinematics, history }
- * - Return { x, y, vx?, vy?, confidence? }
+ * Custom TensorFlow.js code should return a compiled model.
+ * The model is cached and used for inference on subsequent calls.
  */
 
+import * as tf from '@tensorflow/tfjs';
 import type { DecoderInput, DecoderOutput, Decoder } from '../types/decoders';
 import { PERFORMANCE_THRESHOLDS } from '../utils/constants';
 import { tfWorker, getWorkerModelType } from './tfWorkerManager';
@@ -18,80 +19,181 @@ import { tfWorker, getWorkerModelType } from './tfWorkerManager';
 const spikeHistory: number[][] = [];
 const MAX_HISTORY = 10;
 
-// Cache compiled decoder functions for JavaScript decoders
-type DecoderResult = { x: number; y: number; vx?: number; vy?: number; confidence?: number };
-const compiledDecoders = new Map<string, (input: DecoderInput) => DecoderResult>();
+// Cache for custom TensorFlow.js models (created from code)
+const customModels = new Map<string, tf.LayersModel>();
 
-// Track failed decoders to avoid spamming errors
-const failedDecoders = new Set<string>();
+// Track failed model creation to avoid retrying broken code
+const failedModels = new Set<string>();
 
 /**
- * Get or compile a JavaScript decoder function
- * Uses the same pattern for both built-in baselines and custom decoders
+ * Check if code is TensorFlow.js model creation code
  */
-function getCompiledDecoder(decoder: Decoder): (input: DecoderInput) => DecoderResult {
-  const cacheKey = `${decoder.id}:${decoder.code}`;
-  
-  if (!compiledDecoders.has(cacheKey)) {
-    console.log(`[Decoder] Compiling: ${decoder.name}`);
-    const fn = new Function('input', decoder.code!) as (input: DecoderInput) => DecoderResult;
-    compiledDecoders.set(cacheKey, fn);
-  }
-  
-  return compiledDecoders.get(cacheKey)!;
+function isTFJSModelCode(code: string): boolean {
+  return code.includes('tf.sequential') || 
+         code.includes('tf.model') || 
+         code.includes('tf.layers');
 }
 
 /**
- * Clear compiled decoder cache
+ * Create a TensorFlow.js model from custom code (cached)
+ */
+async function getOrCreateCustomModel(decoder: Decoder): Promise<tf.LayersModel> {
+  const cacheKey = decoder.id;
+  
+  // Don't retry failed models
+  if (failedModels.has(cacheKey)) {
+    throw new Error(`Model "${decoder.name}" previously failed to create`);
+  }
+  
+  if (!customModels.has(cacheKey)) {
+    console.log(`[Decoder] Creating custom model: ${decoder.name}`);
+    
+    try {
+      // Execute the code to create the model
+      const createModel = new Function('tf', decoder.code!) as (tf: typeof import('@tensorflow/tfjs')) => tf.LayersModel | Promise<tf.LayersModel>;
+      const model = await Promise.resolve(createModel(tf));
+      
+      if (!model || typeof model.predict !== 'function') {
+        throw new Error('Code must return a TensorFlow.js model with a predict() method');
+      }
+      
+      customModels.set(cacheKey, model);
+      console.log(`[Decoder] Model created: ${decoder.name}`, {
+        inputShape: model.inputs[0]?.shape,
+        outputShape: model.outputs[0]?.shape
+      });
+    } catch (error) {
+      failedModels.add(cacheKey);
+      throw new Error(
+        `Failed to create model from code: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
+  }
+  
+  return customModels.get(cacheKey)!;
+}
+
+/**
+ * Clear custom model cache
  */
 export function clearDecoderCache(decoderId?: string) {
   if (decoderId) {
-    for (const key of compiledDecoders.keys()) {
-      if (key.startsWith(decoderId + ':')) {
-        compiledDecoders.delete(key);
-        failedDecoders.delete(key);
-      }
+    const model = customModels.get(decoderId);
+    if (model) {
+      model.dispose();
+      customModels.delete(decoderId);
     }
+    failedModels.delete(decoderId);
   } else {
-    compiledDecoders.clear();
-    failedDecoders.clear();
+    for (const model of customModels.values()) {
+      model.dispose();
+    }
+    customModels.clear();
+    failedModels.clear();
   }
 }
 
 /**
- * Execute a JavaScript decoder (synchronous)
+ * Execute a custom TensorFlow.js model decoder
+ * Same pattern as built-in: create model once, run inference per frame
  */
-export function executeJSDecoder(
+export async function executeCustomTFJSDecoder(
+  decoder: Decoder,
+  input: DecoderInput
+): Promise<DecoderOutput> {
+  const startTime = performance.now();
+  
+  // Get or create the model (cached)
+  const model = await getOrCreateCustomModel(decoder);
+  
+  // Prepare input tensor
+  const inputData = [...input.spikes];
+  
+  // Run inference (same as built-in models)
+  const result = tf.tidy(() => {
+    const inputTensor = tf.tensor2d([inputData], [1, inputData.length]);
+    const prediction = model.predict(inputTensor) as tf.Tensor;
+    return prediction;
+  });
+  
+  const outputData = await result.data();
+  result.dispose();
+  
+  const latency = performance.now() - startTime;
+  
+  // Scale output to velocity (same as built-in)
+  const VELOCITY_SCALE = 50;
+  const vx = outputData[0] * VELOCITY_SCALE;
+  const vy = outputData[1] * VELOCITY_SCALE;
+  
+  // Calculate new position
+  const DT = 0.025;
+  const x = input.kinematics.x + vx * DT;
+  const y = input.kinematics.y + vy * DT;
+  
+  return {
+    x: Math.max(-100, Math.min(100, x)),
+    y: Math.max(-100, Math.min(100, y)),
+    vx,
+    vy,
+    latency,
+  };
+}
+
+/**
+ * Execute a simple JavaScript decoder (baselines)
+ * Code directly computes and returns {x, y, vx?, vy?}
+ */
+export function executeSimpleJSDecoder(
   decoder: Decoder,
   input: DecoderInput
 ): DecoderOutput {
   const startTime = performance.now();
 
-  try {
-    // Use cached compiled function
-    const decoderFunction = getCompiledDecoder(decoder);
-    const result = decoderFunction(input);
-    
-    const latency = performance.now() - startTime;
+  // Compile and cache the function
+  const cacheKey = decoder.id;
+  type DecoderResult = { x: number; y: number; vx?: number; vy?: number; confidence?: number };
+  
+  // Use a module-level cache for simple JS decoders
+  const simpleDecoderCache = (executeSimpleJSDecoder as { cache?: Map<string, (input: DecoderInput) => DecoderResult> }).cache 
+    ??= new Map();
+  
+  if (!simpleDecoderCache.has(cacheKey)) {
+    const fn = new Function('input', decoder.code!) as (input: DecoderInput) => DecoderResult;
+    simpleDecoderCache.set(cacheKey, fn);
+  }
+  
+  const decoderFn = simpleDecoderCache.get(cacheKey)!;
+  const result = decoderFn(input);
+  
+  const latency = performance.now() - startTime;
 
-    // Enforce timeout
-    if (latency > PERFORMANCE_THRESHOLDS.DECODER_TIMEOUT_MS) {
-      console.warn(`[Decoder] ${decoder.name} exceeded timeout: ${latency.toFixed(2)}ms`);
-    }
+  if (latency > PERFORMANCE_THRESHOLDS.DECODER_TIMEOUT_MS) {
+    console.warn(`[Decoder] ${decoder.name} exceeded timeout: ${latency.toFixed(2)}ms`);
+  }
 
-    return {
-      x: result.x,
-      y: result.y,
-      vx: result.vx,
-      vy: result.vy,
-      confidence: result.confidence,
-      latency,
-    };
-  } catch (error) {
-    // Never silently corrupt data - rethrow with context
-    throw new Error(
-      `[Decoder] JS execution failed for "${decoder.name}": ${error instanceof Error ? error.message : String(error)}`
-    );
+  return {
+    x: result.x,
+    y: result.y,
+    vx: result.vx,
+    vy: result.vy,
+    confidence: result.confidence,
+    latency,
+  };
+}
+
+/**
+ * Execute a code-based decoder (auto-detects type)
+ */
+export async function executeCodeDecoder(
+  decoder: Decoder,
+  input: DecoderInput
+): Promise<DecoderOutput> {
+  // Detect if this is TensorFlow.js model code or simple JS
+  if (isTFJSModelCode(decoder.code!)) {
+    return executeCustomTFJSDecoder(decoder, input);
+  } else {
+    return executeSimpleJSDecoder(decoder, input);
   }
 }
 
@@ -167,9 +269,9 @@ export async function executeTFJSDecoder(
 /**
  * Execute any decoder - unified routing
  * 
- * Simplified execution paths:
- * 1. TFJS with tfjsModelType → Web Worker inference (built-in models)
- * 2. JavaScript with code → Compiled function execution (baselines & custom)
+ * Execution paths:
+ * 1. Has code → Auto-detect: TFJS model code or simple JS
+ * 2. Has tfjsModelType → Web Worker inference (built-in TFJS models)
  * 
  * THROWS on invalid decoder configuration - never silently corrupts data
  */
@@ -177,20 +279,20 @@ export async function executeDecoder(
   decoder: Decoder,
   input: DecoderInput
 ): Promise<DecoderOutput> {
-  // Built-in TFJS decoders (Web Worker, non-blocking)
-  if (decoder.type === 'tfjs' && decoder.tfjsModelType) {
-    return executeTFJSDecoder(decoder, input);
+  // Code-based decoders (custom + baselines)
+  // Auto-detects if code creates a TF model or is simple JS
+  if (decoder.code) {
+    return executeCodeDecoder(decoder, input);
   }
   
-  // JavaScript decoders (built-in baselines + custom)
-  if (decoder.type === 'javascript' && decoder.code) {
-    return executeJSDecoder(decoder, input);
+  // Built-in TFJS decoders (Web Worker, non-blocking)
+  if (decoder.tfjsModelType) {
+    return executeTFJSDecoder(decoder, input);
   }
   
   // Invalid decoder configuration - fail hard, never silently corrupt data
   throw new Error(
     `[Decoder] Invalid decoder configuration for "${decoder.name}" (id: ${decoder.id}). ` +
-    `Type: ${decoder.type}, has code: ${!!decoder.code}, tfjsModelType: ${decoder.tfjsModelType ?? 'none'}. ` +
-    `Decoder must have either (type='tfjs' + tfjsModelType) or (type='javascript' + code).`
+    `Decoder must have either 'code' (JavaScript/TFJS) or 'tfjsModelType' (built-in TFJS).`
   );
 }
