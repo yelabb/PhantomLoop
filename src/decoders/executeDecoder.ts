@@ -15,6 +15,9 @@ import type { DecoderInput, DecoderOutput, Decoder } from '../types/decoders';
 import { PERFORMANCE_THRESHOLDS } from '../utils/constants';
 import { tfWorker, getWorkerModelType } from './tfWorkerManager';
 
+// Force bundler to include tf.train namespace (used by custom code)
+void tf.train.adam;
+
 // Spike history for temporal models (LSTM, Attention)
 const spikeHistory: number[][] = [];
 const MAX_HISTORY = 10;
