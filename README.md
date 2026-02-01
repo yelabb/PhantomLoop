@@ -16,18 +16,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ---
+<img width="2524"  alt="image" src="https://github.com/user-attachments/assets/b07558b9-381d-457e-941c-0be0ad97a398" />
+<img width="1977" height="1973" alt="image" src="https://github.com/user-attachments/assets/8b8461b0-eb94-4113-8b98-eb20d332473e" />
 
-## 🔗 Part of the Phantom Stack
-
-PhantomLoop is one component of the **Phantom Stack**, an integrated ecosystem for real-time brain-computer interface (BCI) research and development:
-
-| Repository | Description | Language |
-|------------|-------------|----------|
-| **[PhantomX](https://github.com/yelabb/PhantomX)** | Experimental ML research platform for neural decoding algorithms and model development | Python |
-| **[PhantomCore](https://github.com/yelabb/PhantomCore)** | High-performance C++ signal processing library for neural decoding (Kalman filters, spike detection, SIMD optimizations) | C++ |
-| **[PhantomZip](https://github.com/yelabb/PhantomZip)** | Ultra-low latency neural data compression codec optimized for embedded systems and real-time streaming | Rust |
-| **[PhantomLink](https://github.com/yelabb/PhantomLink)** | Python backend server for neural data streaming, dataset management, and WebSocket communication | Python |
-| **[PhantomLoop](https://github.com/yelabb/PhantomLoop)** ← *You are here* | Real-time web-based visualization dashboard for BCI decoder testing and validation | TypeScript/React |
 
 ---
 
@@ -131,12 +122,6 @@ PhantomLoop supports **any multichannel time-series source** through a unified a
 | **BrainAccess** | HALO, MINI, MIDI | Affordable research EEG |
 
 📚 Full device list: [labstreaminglayer.org](https://labstreaminglayer.org/#checks:certified)
-
----
-
-PhantomLoop streams neural data from PhantomLink (MC_Maze dataset, 142 channels @ 40Hz) and visualizes **ground truth cursor movements** alongside **your decoder's predictions**. Built for BCI researchers who need to rapidly prototype, test, and compare decoding algorithms.
-
-<img width="2524"  alt="image" src="https://github.com/user-attachments/assets/b07558b9-381d-457e-941c-0be0ad97a398" />
 
 ---
 
@@ -797,3 +782,4 @@ All code was tested and validated by the author.
 *"Visualize. Decode. Validate. Iterate."*
 
 </div>
+
