@@ -22,8 +22,9 @@ const MAX_HISTORY = 10;
 // Cache for custom TensorFlow.js models (created from code)
 const customModels = new Map<string, tf.LayersModel>();
 
-// Track failed model creation to avoid retrying broken code
-const failedModels = new Set<string>();
+// Cache for compiled JS functions
+type JSDecoderFn = (input: DecoderInput) => { x: number; y: number; vx?: number; vy?: number; confidence?: number };
+const jsFunctions = new Map<string, JSDecoderFn>();
 
 /**
  * Check if code is TensorFlow.js model creation code
@@ -36,60 +37,59 @@ function isTFJSModelCode(code: string): boolean {
 
 /**
  * Create a TensorFlow.js model from custom code (cached)
+ * No "failed" tracking - always tries, throws on error
  */
 async function getOrCreateCustomModel(decoder: Decoder): Promise<tf.LayersModel> {
-  const cacheKey = decoder.id;
-  
-  // Don't retry failed models
-  if (failedModels.has(cacheKey)) {
-    throw new Error(`Model "${decoder.name}" previously failed to create`);
-  }
-  
-  if (!customModels.has(cacheKey)) {
+  if (!customModels.has(decoder.id)) {
     console.log(`[Decoder] Creating custom model: ${decoder.name}`);
     
-    try {
-      // Execute the code to create the model
-      const createModel = new Function('tf', decoder.code!) as (tf: typeof import('@tensorflow/tfjs')) => tf.LayersModel | Promise<tf.LayersModel>;
-      const model = await Promise.resolve(createModel(tf));
-      
-      if (!model || typeof model.predict !== 'function') {
-        throw new Error('Code must return a TensorFlow.js model with a predict() method');
-      }
-      
-      customModels.set(cacheKey, model);
-      console.log(`[Decoder] Model created: ${decoder.name}`, {
-        inputShape: model.inputs[0]?.shape,
-        outputShape: model.outputs[0]?.shape
-      });
-    } catch (error) {
-      failedModels.add(cacheKey);
-      throw new Error(
-        `Failed to create model from code: ${error instanceof Error ? error.message : String(error)}`
-      );
+    // Execute the code to create the model
+    const createModel = new Function('tf', decoder.code!) as (tf: typeof import('@tensorflow/tfjs')) => tf.LayersModel | Promise<tf.LayersModel>;
+    const model = await Promise.resolve(createModel(tf));
+    
+    if (!model || typeof model.predict !== 'function') {
+      throw new Error('Code must return a TensorFlow.js model with predict() method');
     }
+    
+    customModels.set(decoder.id, model);
+    console.log(`[Decoder] Model ready: ${decoder.name}`, {
+      input: model.inputs[0]?.shape,
+      output: model.outputs[0]?.shape
+    });
   }
   
-  return customModels.get(cacheKey)!;
+  return customModels.get(decoder.id)!;
 }
 
 /**
- * Clear custom model cache
+ * Get or compile a JS decoder function (cached)
+ */
+function getOrCompileJSDecoder(decoder: Decoder): JSDecoderFn {
+  if (!jsFunctions.has(decoder.id)) {
+    console.log(`[Decoder] Compiling JS: ${decoder.name}`);
+    const fn = new Function('input', decoder.code!) as JSDecoderFn;
+    jsFunctions.set(decoder.id, fn);
+  }
+  return jsFunctions.get(decoder.id)!;
+}
+
+/**
+ * Clear decoder cache - call when decoder is updated or removed
  */
 export function clearDecoderCache(decoderId?: string) {
   if (decoderId) {
     const model = customModels.get(decoderId);
     if (model) {
       model.dispose();
-      customModels.delete(decoderId);
     }
-    failedModels.delete(decoderId);
+    customModels.delete(decoderId);
+    jsFunctions.delete(decoderId);
   } else {
     for (const model of customModels.values()) {
       model.dispose();
     }
     customModels.clear();
-    failedModels.clear();
+    jsFunctions.clear();
   }
 }
 
@@ -97,26 +97,21 @@ export function clearDecoderCache(decoderId?: string) {
  * Execute a custom TensorFlow.js model decoder
  * Same pattern as built-in: create model once, run inference per frame
  */
-export async function executeCustomTFJSDecoder(
+async function executeCustomTFJSDecoder(
   decoder: Decoder,
   input: DecoderInput
 ): Promise<DecoderOutput> {
   const startTime = performance.now();
   
-  // Get or create the model (cached)
   const model = await getOrCreateCustomModel(decoder);
-  
-  // Prepare input tensor
-  const inputData = [...input.spikes];
   
   // Run inference (same as built-in models)
   const result = tf.tidy(() => {
-    const inputTensor = tf.tensor2d([inputData], [1, inputData.length]);
-    const prediction = model.predict(inputTensor) as tf.Tensor;
-    return prediction;
+    const inputTensor = tf.tensor2d([input.spikes], [1, input.spikes.length]);
+    return model.predict(inputTensor) as tf.Tensor;
   });
   
-  const outputData = await result.data();
+  const outputData = result.dataSync();
   result.dispose();
   
   const latency = performance.now() - startTime;
@@ -141,29 +136,15 @@ export async function executeCustomTFJSDecoder(
 }
 
 /**
- * Execute a simple JavaScript decoder (baselines)
- * Code directly computes and returns {x, y, vx?, vy?}
+ * Execute a simple JavaScript decoder (baselines + custom JS)
  */
-export function executeSimpleJSDecoder(
+function executeSimpleJSDecoder(
   decoder: Decoder,
   input: DecoderInput
 ): DecoderOutput {
   const startTime = performance.now();
 
-  // Compile and cache the function
-  const cacheKey = decoder.id;
-  type DecoderResult = { x: number; y: number; vx?: number; vy?: number; confidence?: number };
-  
-  // Use a module-level cache for simple JS decoders
-  const simpleDecoderCache = (executeSimpleJSDecoder as { cache?: Map<string, (input: DecoderInput) => DecoderResult> }).cache 
-    ??= new Map();
-  
-  if (!simpleDecoderCache.has(cacheKey)) {
-    const fn = new Function('input', decoder.code!) as (input: DecoderInput) => DecoderResult;
-    simpleDecoderCache.set(cacheKey, fn);
-  }
-  
-  const decoderFn = simpleDecoderCache.get(cacheKey)!;
+  const decoderFn = getOrCompileJSDecoder(decoder);
   const result = decoderFn(input);
   
   const latency = performance.now() - startTime;
@@ -185,7 +166,7 @@ export function executeSimpleJSDecoder(
 /**
  * Execute a code-based decoder (auto-detects type)
  */
-export async function executeCodeDecoder(
+async function executeCodeDecoder(
   decoder: Decoder,
   input: DecoderInput
 ): Promise<DecoderOutput> {
