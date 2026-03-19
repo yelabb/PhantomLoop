@@ -135,7 +135,7 @@ export const WelcomeScreen = memo(function WelcomeScreen({ onConnectToDashboard,
   }, [streamConnectionState, onConnectToESPEEG]);
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black">
+    <div className="fixed inset-0 z-[100] overflow-y-auto bg-black">
       {/* Animated background gradient */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute -inset-[100px] opacity-30">
@@ -158,7 +158,7 @@ export const WelcomeScreen = memo(function WelcomeScreen({ onConnectToDashboard,
       />
 
       {/* Main content */}
-      <div className="relative z-10 flex flex-col items-center gap-8 p-8 max-w-lg mx-4">
+      <div className="relative z-10 flex flex-col items-center gap-8 p-8 max-w-lg mx-auto min-h-full justify-center">
         {/* Logo and title */}
         <div className="text-center animate-fade-in">
           <div className="flex justify-center mb-4">
